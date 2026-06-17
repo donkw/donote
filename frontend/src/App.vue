@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import {
-  FileText,
-  FolderOpen,
   ListTree,
-  Pencil,
   Search,
   Settings,
-  Trash2,
   X,
 } from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -22,7 +18,8 @@ import {
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
 import AppHeader from './components/AppHeader.vue'
-import MilkdownEditor from './components/MilkdownEditor.vue'
+import DocumentTabs from './components/DocumentTabs.vue'
+import EditorSurface from './components/EditorSurface.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   getInitialLayoutFontSizes,
@@ -508,69 +505,20 @@ function setError(error: unknown) {
       />
 
       <main class="editor-pane">
-        <div v-if="openDocuments.length" class="document-tabs" role="tablist" aria-label="已打开笔记">
-          <span
-            v-for="document in openDocuments"
-            :key="document.path"
-            class="document-tab"
-            :class="{
-              active: document.path === activeFilePath,
-              dirty: isDocumentDirty(document),
-            }"
-          >
-            <button
-              class="document-tab-main"
-              :data-test="`tab-${document.path}`"
-              type="button"
-              role="tab"
-              :aria-selected="document.path === activeFilePath"
-              @click="switchDocument(document.path)"
-            >
-              <FileText :size="14" />
-              <span>{{ document.name }}</span>
-            </button>
-            <button
-              class="tab-close-button"
-              :data-test="`tab-close-${document.path}`"
-              type="button"
-              :title="`关闭 ${document.name}`"
-              @click="closeDocument(document)"
-            >
-              <X :size="13" />
-            </button>
-          </span>
-        </div>
-
-        <div v-if="activeDocument" class="document-toolbar">
-          <div>
-            <p class="document-label">当前笔记</p>
-            <h1>{{ activeDocument.name }}</h1>
-          </div>
-          <div class="document-actions">
-            <button class="icon-button" type="button" title="重命名" @click="renameActiveDocument">
-              <Pencil :size="17" />
-            </button>
-            <button class="icon-button danger" type="button" title="删除" @click="deleteActiveDocument">
-              <Trash2 :size="17" />
-            </button>
-          </div>
-        </div>
-
-        <MilkdownEditor
-          v-if="activeDocument"
-          v-model="editorContent"
-          :active-path="activeDocument.path"
+        <DocumentTabs
+          :documents="openDocuments"
+          :active-path="activeFilePath"
+          @update:active-path="switchDocument"
+          @close="closeDocument"
         />
 
-        <div v-else class="empty-state">
-          <ListTree :size="42" />
-          <h1>选择一个笔记文件夹开始写作</h1>
-          <p>打开包含 Markdown 文件的文件夹，或新建第一篇笔记。</p>
-          <button class="primary-button large" type="button" @click="openWorkspace">
-            <FolderOpen :size="18" />
-            <span>打开文件夹</span>
-          </button>
-        </div>
+        <EditorSurface
+          v-model="editorContent"
+          :document="activeDocument"
+          @rename="renameActiveDocument"
+          @delete="deleteActiveDocument"
+          @open-workspace="openWorkspace"
+        />
       </main>
 
       <aside v-if="showOutline" class="outline-panel">
