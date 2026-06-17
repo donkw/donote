@@ -8,6 +8,8 @@ import {
   FolderOpen,
   ListTree,
   Pencil,
+  Search,
+  Settings,
   Trash2,
   X,
 } from '@lucide/vue'
@@ -292,9 +294,24 @@ function switchTheme() {
   theme.value = toggleTheme(theme.value)
 }
 
+function toggleSearch() {
+  showSearch.value = !showSearch.value
+  toggleUtilityPanel('search')
+}
+
 function openSettings() {
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   showSettings.value = true
+}
+
+function openSettingsPanel() {
+  openSettings()
+  toggleUtilityPanel('settings')
+}
+
+function toggleOutline() {
+  showOutline.value = !showOutline.value
+  toggleUtilityPanel('outline')
 }
 
 function toggleUtilityPanel(panel: UtilityPanel) {
@@ -411,11 +428,15 @@ function setError(error: unknown) {
   <div class="app-shell">
     <AppHeader
       :show-sidebar="showSidebar"
+      :show-outline="showOutline"
       :theme="theme"
       :save-status-text="saveStatusText"
       :save-state="activeSaveState"
       @toggle-sidebar="showSidebar = !showSidebar"
       @insert-markdown="insertMarkdown"
+      @search="toggleSearch"
+      @settings="openSettingsPanel"
+      @toggle-outline="toggleOutline"
       @save="flushSave"
       @toggle-theme="switchTheme"
       @open-utility="toggleUtilityPanel"
