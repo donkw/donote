@@ -194,7 +194,7 @@ async function createNote() {
       confirmButtonText: '创建',
       cancelButtonText: '取消',
     })
-    name = result.value
+    name = result.value.trim()
   } catch {
     return
   }
@@ -219,7 +219,7 @@ async function renameActiveDocument() {
       confirmButtonText: '重命名',
       cancelButtonText: '取消',
     })
-    nextName = result.value
+    nextName = result.value.trim()
   } catch {
     return
   }

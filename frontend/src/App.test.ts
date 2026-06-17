@@ -543,6 +543,24 @@ describe('App shell', () => {
     expect(CreateMarkdown).not.toHaveBeenCalled()
   })
 
+  test('does not create a note when the Element Plus prompt is whitespace only', async () => {
+    elementPlusMocks.prompt.mockResolvedValueOnce({ value: '   ' })
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [],
+    } as any)
+
+    const wrapper = mount(App)
+    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="new-note"]').trigger('click')
+    await flushPromises()
+
+    expect(CreateMarkdown).not.toHaveBeenCalled()
+  })
+
   test('renames the active document from an Element Plus prompt', async () => {
     elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'renamed.md' })
     vi.mocked(SelectWorkspace).mockResolvedValue({
@@ -596,6 +614,37 @@ describe('App shell', () => {
     expect(ListWorkspace).toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-renamed.md"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('renamed.md')
+  })
+
+  test('does not rename the active document when the Element Plus prompt is whitespace only', async () => {
+    elementPlusMocks.prompt.mockResolvedValueOnce({ value: '   ' })
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+
+    const wrapper = mount(App)
+    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    wrapper.getComponent(EditorSurface).vm.$emit('rename')
+    await flushPromises()
+
+    expect(RenamePath).not.toHaveBeenCalled()
   })
 
   test('uses Element Plus confirmation before deleting the active document', async () => {
