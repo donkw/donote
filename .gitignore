@@ -33,3 +33,5 @@ yarn-error.log*
 
 # Local analysis caches
 .codegraph/
+
+log
