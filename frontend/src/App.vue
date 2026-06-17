@@ -454,6 +454,7 @@ function setError(error: unknown) {
         v-model="showUtilityDrawer"
         :active-panel="activeUtilityPanel"
         :outline="outline"
+        :outline-font-size="layoutFontSizes.outline"
         v-model:search-query="searchQuery"
         :search-result="searchResult"
         :active-search-index="activeSearchIndex"

@@ -8,10 +8,11 @@ import OutlinePanel from './OutlinePanel.vue'
 import SearchPanel from './SearchPanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
   activePanel: UtilityPanel
   outline: OutlineItem[]
+  outlineFontSize: number
   searchQuery: string
   searchResult: SearchResult
   activeSearchIndex: number
@@ -50,7 +51,11 @@ function emitFontSize(area: LayoutFontSizeArea, value: number) {
     size="320px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <OutlinePanel v-if="activePanel === 'outline'" :items="outline" />
+    <OutlinePanel
+      v-if="activePanel === 'outline'"
+      :items="props.outline"
+      :font-size="props.outlineFontSize"
+    />
     <SearchPanel
       v-else-if="activePanel === 'search'"
       :query="searchQuery"

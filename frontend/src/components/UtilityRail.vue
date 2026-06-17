@@ -24,6 +24,8 @@ const tools: Array<{ key: UtilityPanel; label: string; icon: typeof ListTree }> 
     <ElTooltip v-for="tool in tools" :key="tool.key" :content="tool.label" placement="left">
       <ElButton
         :data-test="`utility-${tool.key}`"
+        :aria-label="tool.label"
+        :title="tool.label"
         circle
         :type="drawerOpen && activePanel === tool.key ? 'primary' : 'default'"
         @click="$emit('select', tool.key)"
