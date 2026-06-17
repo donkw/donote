@@ -54,20 +54,7 @@ import {
   saveCollapsedFolderPaths,
   toggleCollapsedFolderPath,
 } from './lib/treeExpansion'
-
-interface VisibleNode {
-  node: main.FileNode
-  depth: number
-}
-
-interface OpenDocument {
-  path: string
-  name: string
-  content: string
-  savedContent: string
-  saving: boolean
-  error: string
-}
+import type { OpenDocument, SaveState, UtilityPanel, VisibleNode } from './types/app'
 
 const lastWorkspaceStorageKey = 'donote.lastWorkspaceRoot'
 
@@ -80,6 +67,8 @@ const showSidebar = ref(true)
 const showOutline = ref(true)
 const showSearch = ref(false)
 const showSettings = ref(false)
+const activeUtilityPanel = ref<UtilityPanel>('outline')
+const showUtilityDrawer = ref(false)
 const searchQuery = ref('')
 const activeSearchIndex = ref(-1)
 const theme = ref<ThemeMode>(getInitialTheme())
@@ -107,7 +96,7 @@ const editorContent = computed({
 })
 const outline = computed(() => extractOutline(editorContent.value))
 const searchResult = computed(() => findMatches(editorContent.value, searchQuery.value))
-const activeSaveState = computed(() => {
+const activeSaveState = computed<SaveState>(() => {
   if (!activeDocument.value) return 'saved'
   if (activeDocument.value.saving) return 'saving'
   if (activeDocument.value.error) return 'error'
@@ -319,6 +308,18 @@ function switchTheme() {
 function openSettings() {
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   showSettings.value = true
+}
+
+function toggleUtilityPanel(panel: UtilityPanel) {
+  if (activeUtilityPanel.value === panel) {
+    showUtilityDrawer.value = !showUtilityDrawer.value
+    return
+  }
+  activeUtilityPanel.value = panel
+  showUtilityDrawer.value = true
+  if (panel === 'settings') {
+    draftLayoutFontSizes.value = { ...layoutFontSizes.value }
+  }
 }
 
 function closeSettings() {
