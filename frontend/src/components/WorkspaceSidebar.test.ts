@@ -79,6 +79,22 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
   })
 
+  test('clicking the native expand caret emits the same collapse intent once', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects'],
+      },
+    })
+
+    await wrapper.get('.el-tree-node__expand-icon').trigger('click')
+
+    expect(wrapper.emitted('folder-collapsed')).toEqual([['projects']])
+    expect(wrapper.emitted('folder-expanded')).toBeUndefined()
+  })
+
   test('emits open and create intents', async () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {

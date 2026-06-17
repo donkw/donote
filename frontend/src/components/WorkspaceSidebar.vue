@@ -27,10 +27,19 @@ const treeProps = {
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 
-function handleNodeClick(node: main.FileNode) {
+function handleNodeClick(node: main.FileNode, event: MouseEvent) {
   if (node.type === 'file') {
     emit('select-file', node.path)
     return
+  }
+
+  const currentTarget = event.currentTarget
+  if (currentTarget instanceof HTMLElement) {
+    const expandIcon = currentTarget.parentElement?.querySelector<HTMLElement>('.el-tree-node__expand-icon')
+    if (expandIcon) {
+      expandIcon.click()
+      return
+    }
   }
 
   const treeNode = treeRef.value?.getNode(node)
@@ -39,11 +48,23 @@ function handleNodeClick(node: main.FileNode) {
   }
 
   if (treeNode.expanded) {
-    emit('folder-collapsed', node.path)
     treeNode.collapse()
+    emit('folder-collapsed', node.path)
   } else {
-    emit('folder-expanded', node.path)
     treeNode.expand()
+    emit('folder-expanded', node.path)
+  }
+}
+
+function handleNodeExpand(node: main.FileNode) {
+  if (node.type === 'folder') {
+    emit('folder-expanded', node.path)
+  }
+}
+
+function handleNodeCollapse(node: main.FileNode) {
+  if (node.type === 'folder') {
+    emit('folder-collapsed', node.path)
   }
 }
 </script>
@@ -77,13 +98,15 @@ function handleNodeClick(node: main.FileNode) {
         :default-expanded-keys="expandedFolderPaths"
         :expand-on-click-node="false"
         highlight-current
+        @node-expand="handleNodeExpand"
+        @node-collapse="handleNodeCollapse"
       >
         <template #default="{ node, data }">
           <button
             class="tree-row file-tree-node"
             :data-test="data.type === 'file' ? `file-${data.path}` : `folder-${data.path}`"
             type="button"
-            @click.stop="handleNodeClick(data)"
+            @click.stop="handleNodeClick(data, $event)"
           >
             <ChevronRight v-if="data.type === 'folder' && !node.expanded" :size="14" />
             <ChevronDown v-else-if="data.type === 'folder'" :size="14" />
