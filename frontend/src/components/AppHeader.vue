@@ -84,6 +84,7 @@ const formatActions = [
       <ElTag
         v-if="saveStatusText"
         class="save-status status-pill"
+        :data-state="saveState"
         :type="saveState === 'error' ? 'danger' : saveState === 'dirty' ? 'warning' : 'info'"
       >
         {{ saveStatusText }}

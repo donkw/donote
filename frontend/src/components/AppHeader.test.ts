@@ -17,6 +17,7 @@ describe('AppHeader', () => {
     expect(wrapper.text()).toContain('Donote')
     expect(wrapper.text()).toContain('有未保存更改')
     expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(true)
+    expect(wrapper.get('.save-status').attributes('data-state')).toBe('dirty')
   })
 
   test('emits user intents from toolbar buttons', async () => {
