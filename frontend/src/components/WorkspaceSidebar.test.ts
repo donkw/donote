@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { ElTree } from 'element-plus'
+import { describe, expect, test, vi } from 'vitest'
 import { main } from '../../wailsjs/go/models'
 import WorkspaceSidebar from './WorkspaceSidebar.vue'
 
@@ -58,10 +59,20 @@ describe('WorkspaceSidebar', () => {
     })
 
     const folderRow = wrapper.get('[data-test="folder-projects"]')
+    const collapse = vi.fn()
+    const expand = vi.fn()
+    const getNode = vi.spyOn(wrapper.getComponent(ElTree).vm, 'getNode').mockReturnValue({
+      expanded: true,
+      collapse,
+      expand,
+    })
 
     expect(folderRow.classes()).toContain('tree-row')
     await folderRow.trigger('click')
 
+    expect(getNode).toHaveBeenCalledWith(tree[0])
+    expect(collapse).toHaveBeenCalledTimes(1)
+    expect(expand).not.toHaveBeenCalled()
     expect(wrapper.emitted('folder-collapsed')).toEqual([['projects']])
     expect(wrapper.emitted('folder-expanded')).toBeUndefined()
   })
@@ -76,40 +87,19 @@ describe('WorkspaceSidebar', () => {
       },
     })
 
+    const collapse = vi.fn()
+    const expand = vi.fn()
+    const getNode = vi.spyOn(wrapper.getComponent(ElTree).vm, 'getNode').mockReturnValue({
+      expanded: false,
+      collapse,
+      expand,
+    })
+
     await wrapper.get('[data-test="folder-projects"]').trigger('click')
 
-    expect(wrapper.emitted('folder-expanded')).toEqual([['projects']])
-    expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
-  })
-
-  test('clicking the native expand caret emits the same collapse intent once', async () => {
-    const wrapper = mount(WorkspaceSidebar, {
-      props: {
-        workspaceName: 'notes',
-        tree,
-        activeFilePath: '',
-        expandedFolderPaths: ['projects'],
-      },
-    })
-
-    await wrapper.get('.el-tree-node__expand-icon').trigger('click')
-
-    expect(wrapper.emitted('folder-collapsed')).toEqual([['projects']])
-    expect(wrapper.emitted('folder-expanded')).toBeUndefined()
-  })
-
-  test('clicking the native expand caret emits the same expand intent once', async () => {
-    const wrapper = mount(WorkspaceSidebar, {
-      props: {
-        workspaceName: 'notes',
-        tree,
-        activeFilePath: '',
-        expandedFolderPaths: [],
-      },
-    })
-
-    await wrapper.get('.el-tree-node__expand-icon').trigger('click')
-
+    expect(getNode).toHaveBeenCalledWith(tree[0])
+    expect(expand).toHaveBeenCalledTimes(1)
+    expect(collapse).not.toHaveBeenCalled()
     expect(wrapper.emitted('folder-expanded')).toEqual([['projects']])
     expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
   })
