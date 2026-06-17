@@ -9,20 +9,17 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
   Quote,
   Search,
   Settings,
   Sun,
 } from '@lucide/vue'
 import { ElButton, ElButtonGroup, ElTag, ElTooltip } from 'element-plus'
-import type { SaveState, UtilityPanel } from '../types/app'
+import type { SaveState } from '../types/app'
 import type { ThemeMode } from '../lib/theme'
 
 defineProps<{
   showSidebar: boolean
-  showOutline: boolean
   theme: ThemeMode
   saveStatusText: string
   saveState: SaveState
@@ -33,10 +30,8 @@ defineEmits<{
   (event: 'insert-markdown', markdown: string): void
   (event: 'search'): void
   (event: 'settings'): void
-  (event: 'toggle-outline'): void
   (event: 'save'): void
   (event: 'toggle-theme'): void
-  (event: 'open-utility', panel: UtilityPanel): void
 }>()
 
 const formatActions = [
@@ -103,12 +98,6 @@ const formatActions = [
       <ElTooltip content="设置" placement="bottom">
         <ElButton class="icon-button" data-test="settings-toggle" circle @click="$emit('settings')">
           <Settings :size="18" />
-        </ElButton>
-      </ElTooltip>
-      <ElTooltip :content="showOutline ? '隐藏大纲' : '显示大纲'" placement="bottom">
-        <ElButton class="icon-button" data-test="outline-toggle" circle @click="$emit('toggle-outline')">
-          <PanelRightClose v-if="showOutline" :size="18" />
-          <PanelRightOpen v-else :size="18" />
         </ElButton>
       </ElTooltip>
       <ElTooltip :content="theme === 'dark' ? '切换浅色' : '切换深色'" placement="bottom">

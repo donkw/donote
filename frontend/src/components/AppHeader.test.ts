@@ -7,7 +7,6 @@ describe('AppHeader', () => {
     const wrapper = mount(AppHeader, {
       props: {
         showSidebar: true,
-        showOutline: true,
         theme: 'light',
         saveStatusText: '有未保存更改',
         saveState: 'dirty',
@@ -17,14 +16,14 @@ describe('AppHeader', () => {
     expect(wrapper.text()).toContain('Donote')
     expect(wrapper.text()).toContain('有未保存更改')
     expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="outline-toggle"]').exists()).toBe(false)
     expect(wrapper.get('.save-status').attributes('data-state')).toBe('dirty')
   })
 
-  test('emits user intents from toolbar buttons', async () => {
+  test('emits search and settings intents from toolbar buttons', async () => {
     const wrapper = mount(AppHeader, {
       props: {
         showSidebar: false,
-        showOutline: false,
         theme: 'dark',
         saveStatusText: '已保存',
         saveState: 'saved',
@@ -33,7 +32,6 @@ describe('AppHeader', () => {
 
     await wrapper.get('[data-test="sidebar-toggle"]').trigger('click')
     await wrapper.get('[data-test="format-heading"]').trigger('click')
-    await wrapper.get('[data-test="outline-toggle"]').trigger('click')
     await wrapper.get('[data-test="settings-toggle"]').trigger('click')
     await wrapper.get('[data-test="search-toggle"]').trigger('click')
     await wrapper.get('[data-test="save-now"]').trigger('click')
@@ -41,7 +39,6 @@ describe('AppHeader', () => {
 
     expect(wrapper.emitted('toggle-sidebar')).toHaveLength(1)
     expect(wrapper.emitted('insert-markdown')?.[0]).toEqual(['# 标题'])
-    expect(wrapper.emitted('toggle-outline')).toHaveLength(1)
     expect(wrapper.emitted('settings')).toHaveLength(1)
     expect(wrapper.emitted('search')).toHaveLength(1)
     expect(wrapper.emitted('save')).toHaveLength(1)

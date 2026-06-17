@@ -84,9 +84,6 @@ const saveStatusText = computed(() => {
   return '已保存'
 })
 const activeFilePath = computed(() => activeDocument.value?.path ?? '')
-const outlineDrawerOpen = computed(
-  () => showUtilityDrawer.value && activeUtilityPanel.value === 'outline',
-)
 const layoutFontStyle = computed(() => ({
   '--sidebar-font-size': `${layoutFontSizes.value.sidebar}px`,
   '--editor-font-size': `${layoutFontSizes.value.editor}px`,
@@ -397,7 +394,6 @@ function setError(error: unknown) {
   <div class="app-shell">
     <AppHeader
       :show-sidebar="showSidebar"
-      :show-outline="outlineDrawerOpen"
       :theme="theme"
       :save-status-text="saveStatusText"
       :save-state="activeSaveState"
@@ -405,10 +401,8 @@ function setError(error: unknown) {
       @insert-markdown="insertMarkdown"
       @search="openUtilityPanel('search')"
       @settings="openUtilityPanel('settings')"
-      @toggle-outline="openUtilityPanel('outline')"
       @save="flushSave"
       @toggle-theme="switchTheme"
-      @open-utility="toggleUtilityPanel"
     />
 
     <div v-if="errorMessage || activeDocument?.error" class="error-banner">
