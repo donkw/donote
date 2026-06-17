@@ -76,7 +76,13 @@ function handleNodeCollapse(node: main.FileNode) {
         <FolderOpen :size="16" />
         <span>打开文件夹</span>
       </ElButton>
-      <ElButton data-test="new-note" circle @click="$emit('create-note')">
+      <ElButton
+        data-test="new-note"
+        circle
+        title="新建笔记"
+        aria-label="新建笔记"
+        @click="$emit('create-note')"
+      >
         <FilePlus :size="17" />
       </ElButton>
     </div>
@@ -104,6 +110,7 @@ function handleNodeCollapse(node: main.FileNode) {
         <template #default="{ node, data }">
           <button
             class="tree-row file-tree-node"
+            :class="{ folder: data.type === 'folder', active: data.path === activeFilePath }"
             :data-test="data.type === 'file' ? `file-${data.path}` : `folder-${data.path}`"
             type="button"
             @click.stop="handleNodeClick(data, $event)"

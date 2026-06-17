@@ -18,7 +18,7 @@ describe('WorkspaceSidebar', () => {
       props: {
         workspaceName: 'notes',
         tree,
-        activeFilePath: '',
+        activeFilePath: 'projects/plan.md',
         expandedFolderPaths: ['projects'],
       },
     })
@@ -27,6 +27,9 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.text()).toContain('打开文件夹')
     expect(wrapper.text()).toContain('projects')
     expect(wrapper.text()).toContain('plan.md')
+    expect(wrapper.get('[data-test="folder-projects"]').classes()).toContain('folder')
+    expect(wrapper.get('[data-test="file-projects/plan.md"]').classes()).toContain('active')
+    expect(wrapper.get('[data-test="new-note"]').attributes('title')).toBe('新建笔记')
   })
 
   test('emits select-file with the file path', async () => {
@@ -93,6 +96,22 @@ describe('WorkspaceSidebar', () => {
 
     expect(wrapper.emitted('folder-collapsed')).toEqual([['projects']])
     expect(wrapper.emitted('folder-expanded')).toBeUndefined()
+  })
+
+  test('clicking the native expand caret emits the same expand intent once', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: [],
+      },
+    })
+
+    await wrapper.get('.el-tree-node__expand-icon').trigger('click')
+
+    expect(wrapper.emitted('folder-expanded')).toEqual([['projects']])
+    expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
   })
 
   test('emits open and create intents', async () => {
