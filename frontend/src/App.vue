@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import {
-  ListTree,
-  Search,
-  Settings,
-  X,
-} from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CreateMarkdown,
@@ -20,10 +14,11 @@ import type { main } from '../wailsjs/go/models'
 import AppHeader from './components/AppHeader.vue'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
+import UtilityDrawer from './components/UtilityDrawer.vue'
+import UtilityRail from './components/UtilityRail.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   getInitialLayoutFontSizes,
-  layoutFontSizeControls,
   normalizeLayoutFontSizes,
   saveLayoutFontSizes,
   type LayoutFontSizeArea,
@@ -32,10 +27,7 @@ import {
 import { extractOutline } from './lib/outline'
 import { findMatches, nextMatchIndex, previousMatchIndex } from './lib/search'
 import { applyTheme, getInitialTheme, toggleTheme, type ThemeMode } from './lib/theme'
-import {
-  getCollapsedFolderPaths,
-  saveCollapsedFolderPaths,
-} from './lib/treeExpansion'
+import { getCollapsedFolderPaths, saveCollapsedFolderPaths } from './lib/treeExpansion'
 import type { OpenDocument, SaveState, UtilityPanel } from './types/app'
 
 const lastWorkspaceStorageKey = 'donote.lastWorkspaceRoot'
@@ -46,9 +38,6 @@ const activeDocumentPath = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const showSidebar = ref(true)
-const showOutline = ref(true)
-const showSearch = ref(false)
-const showSettings = ref(false)
 const activeUtilityPanel = ref<UtilityPanel>('outline')
 const showUtilityDrawer = ref(false)
 const searchQuery = ref('')
@@ -95,6 +84,9 @@ const saveStatusText = computed(() => {
   return '已保存'
 })
 const activeFilePath = computed(() => activeDocument.value?.path ?? '')
+const outlineDrawerOpen = computed(
+  () => showUtilityDrawer.value && activeUtilityPanel.value === 'outline',
+)
 const layoutFontStyle = computed(() => ({
   '--sidebar-font-size': `${layoutFontSizes.value.sidebar}px`,
   '--editor-font-size': `${layoutFontSizes.value.editor}px`,
@@ -281,7 +273,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
   if ((event.ctrlKey || event.metaKey) && key === 'f') {
     event.preventDefault()
-    showSearch.value = true
+    openUtilityPanel('search')
   }
 }
 
@@ -289,55 +281,46 @@ function switchTheme() {
   theme.value = toggleTheme(theme.value)
 }
 
-function toggleSearch() {
-  showSearch.value = !showSearch.value
-  toggleUtilityPanel('search')
-}
-
-function openSettings() {
-  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  showSettings.value = true
-}
-
-function openSettingsPanel() {
-  openSettings()
-  toggleUtilityPanel('settings')
-}
-
-function toggleOutline() {
-  showOutline.value = !showOutline.value
-  toggleUtilityPanel('outline')
-}
-
-function toggleUtilityPanel(panel: UtilityPanel) {
-  if (activeUtilityPanel.value === panel) {
-    showUtilityDrawer.value = !showUtilityDrawer.value
-    return
-  }
-  activeUtilityPanel.value = panel
-  showUtilityDrawer.value = true
+function prepareUtilityPanel(panel: UtilityPanel) {
   if (panel === 'settings') {
     draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   }
 }
 
-function closeSettings() {
-  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  showSettings.value = false
+function openUtilityPanel(panel: UtilityPanel) {
+  activeUtilityPanel.value = panel
+  prepareUtilityPanel(panel)
+  showUtilityDrawer.value = true
 }
 
-function setDraftLayoutFontSize(area: LayoutFontSizeArea, event: Event) {
-  const target = event.target as HTMLInputElement
+function toggleUtilityPanel(panel: UtilityPanel) {
+  if (activeUtilityPanel.value === panel) {
+    const shouldOpen = !showUtilityDrawer.value
+    if (shouldOpen) {
+      prepareUtilityPanel(panel)
+    }
+    showUtilityDrawer.value = shouldOpen
+    return
+  }
+  openUtilityPanel(panel)
+}
+
+function closeSettings() {
+  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
+  showUtilityDrawer.value = false
+}
+
+function setDraftLayoutFontSize(area: LayoutFontSizeArea, value: number) {
   draftLayoutFontSizes.value = normalizeLayoutFontSizes({
     ...draftLayoutFontSizes.value,
-    [area]: Number(target.value),
+    [area]: value,
   })
 }
 
 function saveSettings() {
   layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  showSettings.value = false
+  showUtilityDrawer.value = false
 }
 
 function goToNextMatch() {
@@ -414,15 +397,15 @@ function setError(error: unknown) {
   <div class="app-shell">
     <AppHeader
       :show-sidebar="showSidebar"
-      :show-outline="showOutline"
+      :show-outline="outlineDrawerOpen"
       :theme="theme"
       :save-status-text="saveStatusText"
       :save-state="activeSaveState"
       @toggle-sidebar="showSidebar = !showSidebar"
       @insert-markdown="insertMarkdown"
-      @search="toggleSearch"
-      @settings="openSettingsPanel"
-      @toggle-outline="toggleOutline"
+      @search="openUtilityPanel('search')"
+      @settings="openUtilityPanel('settings')"
+      @toggle-outline="openUtilityPanel('outline')"
       @save="flushSave"
       @toggle-theme="switchTheme"
       @open-utility="toggleUtilityPanel"
@@ -432,63 +415,10 @@ function setError(error: unknown) {
       {{ errorMessage || activeDocument?.error }}
     </div>
 
-    <div v-if="showSearch" class="searchbar floating-search">
-      <Search :size="16" />
-      <input v-model="searchQuery" class="search-input" placeholder="在当前笔记中搜索" />
-      <span class="search-count">{{ searchResult.matches.length ? `${activeSearchIndex + 1}/${searchResult.matches.length}` : '0/0' }}</span>
-      <button class="text-button" type="button" @click="goToPreviousMatch">上一个</button>
-      <button class="text-button" type="button" @click="goToNextMatch">下一个</button>
-    </div>
-
-    <div v-if="showSettings" class="settings-modal-backdrop" @click.self="closeSettings">
-      <section
-        data-test="settings-dialog"
-        class="settings-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-title"
-      >
-        <header class="settings-dialog-header">
-          <div class="settings-heading">
-            <Settings :size="17" />
-            <div>
-              <h2 id="settings-title">设置</h2>
-              <p>布局字体大小</p>
-            </div>
-          </div>
-          <button class="icon-button subtle" type="button" title="关闭设置" @click="closeSettings">
-            <X :size="18" />
-          </button>
-        </header>
-
-        <div class="font-size-settings">
-          <label v-for="control in layoutFontSizeControls" :key="control.key" class="setting-row">
-            <span>{{ control.label }}</span>
-            <input
-              :data-test="`font-size-${control.key}`"
-              type="range"
-              :min="control.min"
-              :max="control.max"
-              :value="draftLayoutFontSizes[control.key]"
-              @input="setDraftLayoutFontSize(control.key, $event)"
-            />
-            <output>{{ draftLayoutFontSizes[control.key] }}px</output>
-          </label>
-        </div>
-
-        <footer class="settings-actions">
-          <button class="text-button" type="button" @click="closeSettings">取消</button>
-          <button data-test="settings-save" class="primary-button" type="button" @click="saveSettings">
-            保存
-          </button>
-        </footer>
-      </section>
-    </div>
-
     <div
       data-test="workspace-layout"
       class="workspace-layout"
-      :class="{ 'without-sidebar': !showSidebar, 'without-outline': !showOutline }"
+      :class="{ 'without-sidebar': !showSidebar }"
       :style="layoutFontStyle"
     >
       <WorkspaceSidebar
@@ -521,24 +451,25 @@ function setError(error: unknown) {
         />
       </main>
 
-      <aside v-if="showOutline" class="outline-panel">
-        <div class="panel-title">
-          <ListTree :size="16" />
-          <span>大纲</span>
-        </div>
-        <div v-if="outline.length" class="outline-list">
-          <button
-            v-for="item in outline"
-            :key="item.id"
-            class="outline-row"
-            type="button"
-            :style="{ paddingLeft: `${8 + (item.level - 1) * 14}px` }"
-          >
-            {{ item.text }}
-          </button>
-        </div>
-        <p v-else class="outline-empty">当前笔记没有标题</p>
-      </aside>
+      <UtilityRail
+        :active-panel="activeUtilityPanel"
+        :drawer-open="showUtilityDrawer"
+        @select="toggleUtilityPanel"
+      />
+      <UtilityDrawer
+        v-model="showUtilityDrawer"
+        :active-panel="activeUtilityPanel"
+        :outline="outline"
+        v-model:search-query="searchQuery"
+        :search-result="searchResult"
+        :active-search-index="activeSearchIndex"
+        :draft-layout-font-sizes="draftLayoutFontSizes"
+        @previous-match="goToPreviousMatch"
+        @next-match="goToNextMatch"
+        @update-font-size="setDraftLayoutFontSize"
+        @cancel-settings="closeSettings"
+        @save-settings="saveSettings"
+      />
     </div>
   </div>
 </template>

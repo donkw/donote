@@ -487,12 +487,12 @@ describe('App shell', () => {
 
     await wrapper.get('[data-test="settings-toggle"]').trigger('click')
 
-    expect(wrapper.find('[data-test="settings-page"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="settings-dialog"]').exists()).toBe(true)
+    expect(wrapper.find('.floating-search').exists()).toBe(false)
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('布局字体大小')
-    await wrapper.get('[data-test="font-size-sidebar"]').setValue(12)
-    await wrapper.get('[data-test="font-size-editor"]').setValue(19)
-    await wrapper.get('[data-test="font-size-outline"]').setValue(14)
+    await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
+    await wrapper.get('[data-test="font-size-editor"] input').setValue(19)
+    await wrapper.get('[data-test="font-size-outline"] input').setValue(14)
 
     const stagedStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
     expect(stagedStyle).toContain('--sidebar-font-size: 13px')
@@ -509,6 +509,24 @@ describe('App shell', () => {
     expect(window.localStorage.getItem('donote.layoutFontSizes')).toBe(
       '{"sidebar":12,"editor":19,"outline":14}',
     )
-    expect(wrapper.find('[data-test="settings-dialog"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
+  })
+
+  test('opens search in the utility drawer from Ctrl+F', async () => {
+    const wrapper = mount(App)
+
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'f',
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    )
+    await flushPromises()
+
+    expect(wrapper.find('.floating-search').exists()).toBe(false)
+    wrapper.get('[data-test="search-input"]')
   })
 })
