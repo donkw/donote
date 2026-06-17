@@ -92,13 +92,13 @@ describe('App shell', () => {
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
   })
 
-  test('renders modern grouped controls for the app chrome', () => {
+  test('renders modern Element Plus app chrome', () => {
     const wrapper = mount(App)
 
-    expect(wrapper.get('[data-test="topbar"]').classes()).toContain('app-chrome')
-    expect(wrapper.get('[data-test="format-toolbar"]').classes()).toContain('control-cluster')
-    expect(wrapper.get('[data-test="window-actions"]').classes()).toContain('control-cluster')
+    expect(wrapper.get('[data-test="topbar"]').classes()).toContain('app-header')
+    expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="utility-outline"]').exists()).toBe(true)
   })
 
   test('restores the last opened workspace on startup', async () => {
@@ -743,9 +743,9 @@ describe('App shell', () => {
     expect(initialStyle).toContain('--editor-font-size: 17px')
     expect(initialStyle).toContain('--outline-font-size: 13px')
 
-    await wrapper.get('[data-test="settings-toggle"]').trigger('click')
+    await wrapper.get('[data-test="utility-settings"]').trigger('click')
 
-    expect(wrapper.find('.floating-search').exists()).toBe(false)
+    expect(wrapper.find('[data-test="settings-page"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('布局字体大小')
     await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
@@ -784,7 +784,6 @@ describe('App shell', () => {
     )
     await flushPromises()
 
-    expect(wrapper.find('.floating-search').exists()).toBe(false)
     wrapper.get('[data-test="search-input"]')
   })
 
