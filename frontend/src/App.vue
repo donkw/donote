@@ -1,27 +1,13 @@
 <script setup lang="ts">
 import {
-  Bold,
   ChevronDown,
   ChevronRight,
-  Code,
   FilePlus,
   FileText,
   Folder,
   FolderOpen,
-  Heading1,
-  Italic,
-  List,
   ListTree,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
   Pencil,
-  Quote,
-  Search,
-  Settings,
-  Sun,
   Trash2,
   X,
 } from '@lucide/vue'
@@ -37,6 +23,7 @@ import {
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
+import AppHeader from './components/AppHeader.vue'
 import MilkdownEditor from './components/MilkdownEditor.vue'
 import {
   getInitialLayoutFontSizes,
@@ -422,81 +409,17 @@ function setError(error: unknown) {
 
 <template>
   <div class="app-shell">
-    <header data-test="topbar" class="topbar app-chrome">
-      <div class="brand">
-        <button
-          class="icon-button subtle"
-          type="button"
-          :title="showSidebar ? '隐藏文件树' : '显示文件树'"
-          @click="showSidebar = !showSidebar"
-        >
-          <PanelLeftClose v-if="showSidebar" :size="18" />
-          <PanelLeftOpen v-else :size="18" />
-        </button>
-        <span data-test="brand-mark" class="brand-mark">D</span>
-        <span class="brand-copy">
-          <span class="brand-name">Donote</span>
-          <span class="brand-subtitle">Markdown Notes</span>
-        </span>
-      </div>
-
-      <div data-test="format-toolbar" class="toolbar-group control-cluster format-toolbar">
-        <button class="tool-button" type="button" title="标题" @click="insertMarkdown('# 标题')">
-          <Heading1 :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="加粗" @click="insertMarkdown('**加粗文本**')">
-          <Bold :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="斜体" @click="insertMarkdown('*斜体文本*')">
-          <Italic :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="列表" @click="insertMarkdown('- 列表项')">
-          <List :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="引用" @click="insertMarkdown('> 引用')">
-          <Quote :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="代码" @click="insertMarkdown('`代码`')">
-          <Code :size="17" />
-        </button>
-      </div>
-
-      <div class="toolbar-spacer" />
-
-      <div data-test="window-actions" class="toolbar-group control-cluster window-actions">
-        <span v-if="saveStatusText" class="save-status status-pill" :data-state="activeSaveState">
-          {{ saveStatusText }}
-        </span>
-        <button class="icon-button" type="button" title="当前文档搜索" @click="showSearch = !showSearch">
-          <Search :size="18" />
-        </button>
-        <button class="icon-button" type="button" title="立即保存" @click="flushSave">
-          <FileText :size="18" />
-        </button>
-        <button
-          data-test="settings-toggle"
-          class="icon-button"
-          type="button"
-          :title="showSettings ? '隐藏设置' : '显示设置'"
-          @click="showSettings ? closeSettings() : openSettings()"
-        >
-          <Settings :size="18" />
-        </button>
-        <button class="icon-button" type="button" :title="theme === 'dark' ? '切换浅色' : '切换深色'" @click="switchTheme">
-          <Sun v-if="theme === 'dark'" :size="18" />
-          <Moon v-else :size="18" />
-        </button>
-        <button
-          class="icon-button"
-          type="button"
-          :title="showOutline ? '隐藏大纲' : '显示大纲'"
-          @click="showOutline = !showOutline"
-        >
-          <PanelRightClose v-if="showOutline" :size="18" />
-          <PanelRightOpen v-else :size="18" />
-        </button>
-      </div>
-    </header>
+    <AppHeader
+      :show-sidebar="showSidebar"
+      :theme="theme"
+      :save-status-text="saveStatusText"
+      :save-state="activeSaveState"
+      @toggle-sidebar="showSidebar = !showSidebar"
+      @insert-markdown="insertMarkdown"
+      @save="flushSave"
+      @toggle-theme="switchTheme"
+      @open-utility="toggleUtilityPanel"
+    />
 
     <div v-if="errorMessage || activeDocument?.error" class="error-banner">
       {{ errorMessage || activeDocument?.error }}
