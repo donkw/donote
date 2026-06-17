@@ -46,7 +46,9 @@
 Run:
 
 ```powershell
-npm --prefix frontend install element-plus@2.14.2
+Push-Location frontend
+npm install element-plus@2.14.2
+Pop-Location
 ```
 
 Expected: `frontend/package.json` includes `"element-plus": "^2.14.2"` and `frontend/package-lock.json` includes an `element-plus` package entry.
