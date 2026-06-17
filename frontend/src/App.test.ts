@@ -419,7 +419,7 @@ describe('App shell', () => {
     await wrapper.get('[data-test="folder-projects"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('[data-test="file-projects/plan.md"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="file-projects/plan.md"]').isVisible()).toBe(false)
     expect(window.localStorage.getItem('donote.treeExpansion')).toBe(
       '{"D:/notes":["projects"]}',
     )

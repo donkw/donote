@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import {
-  ChevronDown,
-  ChevronRight,
-  FilePlus,
   FileText,
-  Folder,
   FolderOpen,
   ListTree,
   Pencil,
@@ -27,6 +23,7 @@ import {
 import type { main } from '../wailsjs/go/models'
 import AppHeader from './components/AppHeader.vue'
 import MilkdownEditor from './components/MilkdownEditor.vue'
+import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   getInitialLayoutFontSizes,
   layoutFontSizeControls,
@@ -41,9 +38,8 @@ import { applyTheme, getInitialTheme, toggleTheme, type ThemeMode } from './lib/
 import {
   getCollapsedFolderPaths,
   saveCollapsedFolderPaths,
-  toggleCollapsedFolderPath,
 } from './lib/treeExpansion'
-import type { OpenDocument, SaveState, UtilityPanel, VisibleNode } from './types/app'
+import type { OpenDocument, SaveState, UtilityPanel } from './types/app'
 
 const lastWorkspaceStorageKey = 'donote.lastWorkspaceRoot'
 
@@ -66,8 +62,10 @@ const layoutFontSizes = ref(getInitialLayoutFontSizes())
 const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 
-const visibleNodes = computed(() =>
-  workspace.value ? flattenTree(workspace.value.tree, 0, collapsedFolderPaths.value) : [],
+const expandedFolderPaths = computed(() =>
+  workspace.value
+    ? collectFolderPaths(workspace.value.tree).filter((path) => !collapsedFolderPaths.value.has(path))
+    : [],
 )
 const activeDocument = computed(() =>
   openDocuments.value.find((document) => document.path === activeDocumentPath.value) ?? null,
@@ -394,29 +392,20 @@ function normalizeMarkdownForDirtyCheck(content: string): string {
   return content.replace(/\s+$/g, '')
 }
 
-function toggleFolder(path: string) {
-  if (!workspace.value) return
-  const collapsedPaths = toggleCollapsedFolderPath([...collapsedFolderPaths.value], path)
-  collapsedFolderPaths.value = new Set(collapsedPaths)
-  saveCollapsedFolderPaths(workspace.value.rootPath, collapsedPaths)
-}
-
-function isFolderCollapsed(path: string): boolean {
-  return collapsedFolderPaths.value.has(path)
-}
-
-function flattenTree(
-  nodes: main.FileNode[],
-  depth: number,
-  collapsedPaths: Set<string>,
-): VisibleNode[] {
+function collectFolderPaths(nodes: main.FileNode[]): string[] {
   return nodes.flatMap((node) => {
-    const visible: VisibleNode[] = [{ node, depth }]
-    if (node.type === 'folder' && node.children && !collapsedPaths.has(node.path)) {
-      visible.push(...flattenTree(node.children, depth + 1, collapsedPaths))
-    }
-    return visible
+    if (node.type !== 'folder') return []
+    return [node.path, ...collectFolderPaths(node.children ?? [])]
   })
+}
+
+function setFolderCollapsed(path: string, collapsed: boolean) {
+  if (!workspace.value) return
+  const next = new Set(collapsedFolderPaths.value)
+  if (collapsed) next.add(path)
+  else next.delete(path)
+  collapsedFolderPaths.value = next
+  saveCollapsedFolderPaths(workspace.value.rootPath, [...next])
 }
 
 function setError(error: unknown) {
@@ -505,42 +494,18 @@ function setError(error: unknown) {
       :class="{ 'without-sidebar': !showSidebar, 'without-outline': !showOutline }"
       :style="layoutFontStyle"
     >
-      <aside v-if="showSidebar" class="sidebar">
-        <div class="sidebar-actions">
-          <button data-test="open-workspace" class="primary-button" type="button" @click="openWorkspace">
-            <FolderOpen :size="16" />
-            <span>打开文件夹</span>
-          </button>
-          <button data-test="new-note" class="icon-button" type="button" title="新建笔记" @click="createNote">
-            <FilePlus :size="17" />
-          </button>
-        </div>
-
-        <div v-if="workspace" class="workspace-title">
-          <Folder :size="16" />
-          <span>{{ workspace.name }}</span>
-        </div>
-        <div v-else class="sidebar-empty">还没有打开笔记文件夹</div>
-
-        <div v-if="visibleNodes.length" class="file-tree">
-          <button
-            v-for="{ node, depth } in visibleNodes"
-            :key="node.path"
-            class="tree-row"
-            :class="{ active: node.path === activeFilePath, folder: node.type === 'folder' }"
-            :style="{ paddingLeft: `${12 + depth * 18}px` }"
-            :data-test="node.type === 'file' ? `file-${node.path}` : `folder-${node.path}`"
-            type="button"
-            :aria-expanded="node.type === 'folder' ? !isFolderCollapsed(node.path) : undefined"
-            @click="node.type === 'folder' ? toggleFolder(node.path) : selectFile(node.path)"
-          >
-            <ChevronRight v-if="node.type === 'folder' && isFolderCollapsed(node.path)" :size="14" />
-            <ChevronDown v-else-if="node.type === 'folder'" :size="14" />
-            <FileText v-else :size="14" />
-            <span>{{ node.name }}</span>
-          </button>
-        </div>
-      </aside>
+      <WorkspaceSidebar
+        v-if="showSidebar"
+        :workspace-name="workspace?.name ?? ''"
+        :tree="workspace?.tree ?? []"
+        :active-file-path="activeFilePath"
+        :expanded-folder-paths="expandedFolderPaths"
+        @open-workspace="openWorkspace"
+        @create-note="createNote"
+        @select-file="selectFile"
+        @folder-expanded="setFolderCollapsed($event, false)"
+        @folder-collapsed="setFolderCollapsed($event, true)"
+      />
 
       <main class="editor-pane">
         <div v-if="openDocuments.length" class="document-tabs" role="tablist" aria-label="已打开笔记">
