@@ -34,8 +34,8 @@ defineEmits<{
       <span class="search-count">
         {{ result.matches.length ? `${activeIndex + 1}/${result.matches.length}` : '0/0' }}
       </span>
-      <ElButton @click="$emit('previous')">上一个</ElButton>
-      <ElButton @click="$emit('next')">下一个</ElButton>
+      <ElButton data-test="search-previous" @click="$emit('previous')">上一个</ElButton>
+      <ElButton data-test="search-next" @click="$emit('next')">下一个</ElButton>
     </div>
   </div>
 </template>

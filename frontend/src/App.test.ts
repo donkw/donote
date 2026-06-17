@@ -529,4 +529,45 @@ describe('App shell', () => {
     expect(wrapper.find('.floating-search').exists()).toBe(false)
     wrapper.get('[data-test="search-input"]')
   })
+
+  test('searches the active document from the utility rail drawer', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro\n\nIntro body\n\n## Intro again',
+    })
+
+    const wrapper = mount(App)
+    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="utility-search"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="search-input"]').setValue('Intro')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('1/3')
+
+    await wrapper.get('[data-test="search-next"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('2/3')
+
+    await wrapper.get('[data-test="search-previous"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('1/3')
+  })
 })

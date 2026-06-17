@@ -288,119 +288,12 @@ input:focus-visible {
   font-weight: 650;
 }
 
-.searchbar {
-  grid-row: 3;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--chrome-bg);
-  backdrop-filter: blur(14px);
-}
-
-.floating-search {
-  box-shadow: 0 10px 26px rgba(23, 32, 42, 0.06);
-}
-
-.search-input {
-  width: min(440px, 42vw);
-  height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--control-bg);
-  color: var(--text);
-  outline: none;
-}
-
 .search-count {
   min-width: 42px;
   color: var(--text-subtle);
   font-size: 12px;
   font-weight: 700;
   text-align: center;
-}
-
-.settings-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(17, 20, 24, 0.32);
-  backdrop-filter: blur(6px);
-}
-
-.settings-dialog {
-  width: min(620px, calc(100vw - 48px));
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel-strong);
-  box-shadow: var(--shadow-soft);
-}
-
-.settings-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.settings-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
-}
-
-.settings-heading h2,
-.settings-heading p {
-  margin: 0;
-}
-
-.settings-heading h2 {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.settings-heading p {
-  margin-top: 2px;
-  color: var(--text-subtle);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.font-size-settings {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-}
-
-.setting-row {
-  display: grid;
-  grid-template-columns: 92px minmax(180px, 1fr) 46px;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.setting-row input {
-  width: 100%;
-  accent-color: var(--accent);
-}
-
-.setting-row output {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 
 .settings-actions {
@@ -422,8 +315,7 @@ input:focus-visible {
   grid-template-columns: minmax(0, 1fr) 48px;
 }
 
-.sidebar,
-.outline-panel {
+.sidebar {
   min-height: 0;
   overflow: hidden;
   border-right: 1px solid var(--border);
@@ -501,17 +393,20 @@ input:focus-visible {
   font-size: var(--outline-font-size, 13px);
 }
 
-.sidebar-empty,
-.outline-empty {
+.sidebar-empty {
   margin: 12px 14px;
   color: var(--text-subtle);
 }
 
-.file-tree,
-.outline-list {
+.file-tree {
   height: calc(100vh - 130px);
   overflow: auto;
   padding: 8px 8px 16px;
+}
+
+.outline-list {
+  display: grid;
+  gap: 4px;
 }
 
 .tree-row,
