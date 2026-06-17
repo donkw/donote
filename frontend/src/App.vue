@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CreateMarkdown,
@@ -186,7 +187,17 @@ async function createNote() {
     await openWorkspace()
     if (!workspace.value) return
   }
-  const name = window.prompt('新笔记名称', '未命名.md')
+  let name = ''
+  try {
+    const result = await ElMessageBox.prompt('请输入笔记名称', '新建笔记', {
+      inputValue: '未命名.md',
+      confirmButtonText: '创建',
+      cancelButtonText: '取消',
+    })
+    name = result.value
+  } catch {
+    return
+  }
   if (!name) return
 
   try {
@@ -201,7 +212,17 @@ async function createNote() {
 async function renameActiveDocument() {
   const document = activeDocument.value
   if (!document || !workspace.value) return
-  const nextName = window.prompt('重命名笔记', document.name)
+  let nextName = ''
+  try {
+    const result = await ElMessageBox.prompt('请输入新的笔记名称', '重命名笔记', {
+      inputValue: document.name,
+      confirmButtonText: '重命名',
+      cancelButtonText: '取消',
+    })
+    nextName = result.value
+  } catch {
+    return
+  }
   if (!nextName || nextName === document.name) return
 
   try {
@@ -218,8 +239,15 @@ async function renameActiveDocument() {
 async function deleteActiveDocument() {
   const document = activeDocument.value
   if (!document || !workspace.value) return
-  const confirmed = window.confirm(`删除「${document.name}」？此操作无法撤销。`)
-  if (!confirmed) return
+  try {
+    await ElMessageBox.confirm(`删除「${document.name}」？此操作无法撤销。`, '删除笔记', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
 
   try {
     await DeletePath(document.path)
@@ -340,10 +368,15 @@ function switchDocument(path: string) {
   activeSearchIndex.value = -1
 }
 
-function closeDocument(document: OpenDocument) {
+async function closeDocument(document: OpenDocument) {
   if (isDocumentDirty(document)) {
-    const confirmed = window.confirm(`「${document.name}」有未保存更改，关闭后将丢失。确认关闭？`)
-    if (!confirmed) {
+    try {
+      await ElMessageBox.confirm(`「${document.name}」有未保存更改，关闭后将丢失。`, '关闭未保存笔记', {
+        confirmButtonText: '关闭',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+    } catch {
       return
     }
   }
@@ -386,7 +419,9 @@ function setFolderCollapsed(path: string, collapsed: boolean) {
 }
 
 function setError(error: unknown) {
-  errorMessage.value = error instanceof Error ? error.message : String(error)
+  const message = error instanceof Error ? error.message : String(error)
+  errorMessage.value = message
+  ElMessage.error(message)
 }
 </script>
 
