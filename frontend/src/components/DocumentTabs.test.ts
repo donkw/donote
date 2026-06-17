@@ -32,10 +32,11 @@ describe('DocumentTabs', () => {
 
     expect(wrapper.text()).toContain('intro.md')
     expect(wrapper.text()).toContain('draft.md')
-    expect(wrapper.text()).toContain('*')
+    expect(wrapper.get('[data-test="tab-draft.md"] .dirty-mark').text()).toBe('*')
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
   })
 
-  test('emits switch and close events', async () => {
+  test('emits switch events when tabs change', async () => {
     const wrapper = mount(DocumentTabs, {
       props: {
         documents,
@@ -44,9 +45,21 @@ describe('DocumentTabs', () => {
     })
 
     wrapper.findComponent({ name: 'ElTabs' }).vm.$emit('update:modelValue', 'draft.md')
-    await wrapper.get('[data-test="tab-close-intro.md"]').trigger('click')
 
     expect(wrapper.emitted('update:activePath')?.[0]).toEqual(['draft.md'])
+  })
+
+  test('clicking close emits close for that document without switching tabs', async () => {
+    const wrapper = mount(DocumentTabs, {
+      props: {
+        documents,
+        activePath: 'intro.md',
+      },
+    })
+
+    await wrapper.get('[data-test="tab-close-intro.md"]').trigger('click')
+
     expect(wrapper.emitted('close')?.[0]).toEqual([documents[0]])
+    expect(wrapper.emitted('update:activePath')).toBeUndefined()
   })
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FolderOpen, Pencil, Trash2 } from '@lucide/vue'
-import { ElButton, ElEmpty, ElScrollbar, ElTooltip } from 'element-plus'
+import { ElButton, ElEmpty, ElTooltip } from 'element-plus'
 import type { OpenDocument } from '../types/app'
 import MilkdownEditor from './MilkdownEditor.vue'
 
@@ -39,15 +39,11 @@ defineEmits<{
         </div>
       </div>
 
-      <ElScrollbar class="milkdown-shell">
-        <div class="milkdown-editor">
-          <MilkdownEditor
-            :model-value="modelValue"
-            :active-path="document.path"
-            @update:model-value="$emit('update:modelValue', $event)"
-          />
-        </div>
-      </ElScrollbar>
+      <MilkdownEditor
+        :model-value="modelValue"
+        :active-path="document.path"
+        @update:model-value="$emit('update:modelValue', $event)"
+      />
     </template>
 
     <ElEmpty v-else class="empty-state" description="选择一个笔记文件夹开始写作">
