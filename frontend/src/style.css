@@ -305,7 +305,7 @@ textarea:focus-visible {
 .workspace-layout {
   grid-row: 3;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--rail-width);
+  grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr) var(--rail-width);
   min-height: 0;
   overflow: hidden;
 }
@@ -324,6 +324,40 @@ textarea:focus-visible {
   border-right: 1px solid var(--border);
   background: var(--surface-muted);
   font-size: var(--sidebar-font-size, 13px);
+}
+
+.sidebar-resizer {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-left: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-muted), var(--app-bg) 30%);
+  cursor: col-resize;
+}
+
+.sidebar-resizer::before {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 100%;
+  margin: 0 auto;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.sidebar-resizer:hover::before,
+.sidebar-resizer:focus-visible::before,
+.workspace-layout.is-resizing-sidebar .sidebar-resizer::before {
+  background: var(--accent);
+}
+
+.workspace-layout.is-resizing-sidebar {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .sidebar-header {

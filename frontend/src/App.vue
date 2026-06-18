@@ -31,6 +31,11 @@ import {
 } from './lib/layoutFontSizes'
 import { extractOutline } from './lib/outline'
 import { findMatches, nextMatchIndex, previousMatchIndex } from './lib/search'
+import {
+  getInitialSidebarWidth,
+  normalizeSidebarWidth,
+  saveSidebarWidth,
+} from './lib/sidebarWidth'
 import { applyTheme, getInitialTheme, toggleTheme, type ThemeMode } from './lib/theme'
 import { getCollapsedFolderPaths, saveCollapsedFolderPaths } from './lib/treeExpansion'
 import type { OpenDocument, SaveState, UtilityPanel } from './types/app'
@@ -53,8 +58,13 @@ const layoutFontSizes = ref(getInitialLayoutFontSizes())
 const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
 const editorWidth = ref(getInitialEditorWidth())
 const draftEditorWidth = ref(editorWidth.value)
+const sidebarWidth = ref(getInitialSidebarWidth())
+const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 const menuEventCleanups: Array<() => void> = []
+
+let sidebarResizeStartX = 0
+let sidebarResizeStartWidth = sidebarWidth.value
 
 const expandedFolderPaths = computed(() =>
   workspace.value
@@ -95,6 +105,7 @@ const saveStatusText = computed(() => {
 })
 const activeFilePath = computed(() => activeDocument.value?.path ?? '')
 const layoutFontStyle = computed(() => ({
+  '--sidebar-width': `${sidebarWidth.value}px`,
   '--sidebar-font-size': `${layoutFontSizes.value.sidebar}px`,
   '--editor-font-size': `${layoutFontSizes.value.editor}px`,
   '--outline-font-size': `${layoutFontSizes.value.outline}px`,
@@ -121,6 +132,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  removeSidebarResizeListeners()
   while (menuEventCleanups.length) {
     menuEventCleanups.pop()?.()
   }
@@ -273,6 +285,43 @@ function handleKeydown(event: KeyboardEvent) {
 
 function switchTheme() {
   theme.value = toggleTheme(theme.value)
+}
+
+function startSidebarResize(event: PointerEvent) {
+  if (event.button !== 0 || isResizingSidebar.value) {
+    return
+  }
+  event.preventDefault()
+  sidebarResizeStartX = event.clientX
+  sidebarResizeStartWidth = sidebarWidth.value
+  isResizingSidebar.value = true
+  window.addEventListener('pointermove', resizeSidebar)
+  window.addEventListener('pointerup', finishSidebarResize)
+  window.addEventListener('pointercancel', finishSidebarResize)
+}
+
+function resizeSidebar(event: PointerEvent) {
+  if (!isResizingSidebar.value) {
+    return
+  }
+  sidebarWidth.value = normalizeSidebarWidth(
+    sidebarResizeStartWidth + event.clientX - sidebarResizeStartX,
+  )
+}
+
+function finishSidebarResize() {
+  if (!isResizingSidebar.value) {
+    return
+  }
+  isResizingSidebar.value = false
+  sidebarWidth.value = saveSidebarWidth(sidebarWidth.value)
+  removeSidebarResizeListeners()
+}
+
+function removeSidebarResizeListeners() {
+  window.removeEventListener('pointermove', resizeSidebar)
+  window.removeEventListener('pointerup', finishSidebarResize)
+  window.removeEventListener('pointercancel', finishSidebarResize)
 }
 
 function prepareUtilityPanel(panel: UtilityPanel) {
@@ -433,7 +482,7 @@ function setError(error: unknown) {
     <div
       data-test="workspace-layout"
       class="workspace-layout"
-      :class="{ 'without-sidebar': !showSidebar }"
+      :class="{ 'without-sidebar': !showSidebar, 'is-resizing-sidebar': isResizingSidebar }"
       :style="layoutFontStyle"
     >
       <WorkspaceSidebar
@@ -445,6 +494,14 @@ function setError(error: unknown) {
         @select-file="selectFile"
         @folder-expanded="setFolderCollapsed($event, false)"
         @folder-collapsed="setFolderCollapsed($event, true)"
+      />
+      <button
+        v-if="showSidebar"
+        data-test="sidebar-resizer"
+        class="sidebar-resizer"
+        type="button"
+        aria-label="调整目录栏宽度"
+        @pointerdown="startSidebarResize"
       />
 
       <main class="editor-pane">

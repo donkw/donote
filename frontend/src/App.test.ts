@@ -91,6 +91,17 @@ function emitMenuEvent(eventName: 'menu:open-workspace' | 'menu:create-note') {
   handler?.()
 }
 
+function dispatchPointerEvent(
+  target: EventTarget,
+  type: string,
+  options: { clientX: number; button?: number },
+) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'clientX', { value: options.clientX })
+  Object.defineProperty(event, 'button', { value: options.button ?? 0 })
+  target.dispatchEvent(event)
+}
+
 describe('App shell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -640,6 +651,7 @@ describe('App shell', () => {
     const wrapper = mount(App)
 
     const initialStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
+    expect(initialStyle).toContain('--sidebar-width: 286px')
     expect(initialStyle).toContain('--sidebar-font-size: 13px')
     expect(initialStyle).toContain('--editor-font-size: 17px')
     expect(initialStyle).toContain('--outline-font-size: 13px')
@@ -675,6 +687,26 @@ describe('App shell', () => {
     )
     expect(window.localStorage.getItem('donote.editorWidth')).toBe('1100')
     expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
+  })
+
+  test('resizes the sidebar by dragging the divider and stores the width', async () => {
+    const wrapper = mount(App)
+    const layout = wrapper.get('[data-test="workspace-layout"]')
+    const resizer = wrapper.get('[data-test="sidebar-resizer"]')
+
+    expect(layout.attributes('style')).toContain('--sidebar-width: 286px')
+
+    dispatchPointerEvent(resizer.element, 'pointerdown', { clientX: 286, button: 0 })
+    dispatchPointerEvent(window, 'pointermove', { clientX: 356 })
+    await wrapper.vm.$nextTick()
+
+    expect(layout.attributes('style')).toContain('--sidebar-width: 356px')
+    expect(window.localStorage.getItem('donote.sidebarWidth')).toBeNull()
+
+    dispatchPointerEvent(window, 'pointerup', { clientX: 356 })
+    await wrapper.vm.$nextTick()
+
+    expect(window.localStorage.getItem('donote.sidebarWidth')).toBe('356')
   })
 
   test('opens search in the utility drawer from Ctrl+F', async () => {
