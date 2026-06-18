@@ -885,6 +885,8 @@ function setError(error: unknown) {
         <EditorSurface
           v-model="editorContent"
           :document="activeDocument"
+          :search-query="searchQuery"
+          :active-search-index="activeSearchIndex"
           :resolve-image-source="resolveEditorImageSource"
           @paste-files="handlePasteFiles"
           @insert-markdown="insertMarkdown"

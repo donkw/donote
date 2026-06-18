@@ -80,6 +80,8 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
       modelValue: { type: String, required: true },
       activePath: { type: String, default: '' },
       resolveImageSource: { type: Function, default: undefined },
+      searchQuery: { type: String, default: '' },
+      activeSearchIndex: { type: Number, default: -1 },
     },
     emits: ['update:modelValue', 'paste-files', 'insert-markdown'],
     setup(props, { emit }) {
@@ -1334,10 +1336,13 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('1/3')
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('searchQuery')).toBe('Intro')
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('activeSearchIndex')).toBe(0)
 
     await wrapper.get('[data-test="search-next"]').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('2/3')
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('activeSearchIndex')).toBe(1)
 
     await wrapper.get('[data-test="search-previous"]').trigger('click')
     await flushPromises()

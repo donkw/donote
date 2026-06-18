@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { defaultValueCtx, Editor, rootCtx } from '@milkdown/kit/core'
+import { defaultValueCtx, Editor, editorViewCtx, prosePluginsCtx, rootCtx } from '@milkdown/kit/core'
 import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { cursor } from '@milkdown/kit/plugin/cursor'
 import { history } from '@milkdown/kit/plugin/history'
@@ -25,14 +25,27 @@ import { gfm } from '@milkdown/kit/preset/gfm'
 import { replaceAll } from '@milkdown/kit/utils'
 import { Milkdown, useEditor } from '@milkdown/vue'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  createSearchHighlightPlugin,
+  searchHighlightPluginKey,
+  type SearchHighlightState,
+} from '../lib/searchHighlight'
 
 type ResolveImageSource = (source: string, activePath: string) => Promise<string>
 
-const props = defineProps<{
-  modelValue: string
-  activePath: string
-  resolveImageSource?: ResolveImageSource
-}>()
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    activePath: string
+    resolveImageSource?: ResolveImageSource
+    searchQuery?: string
+    activeSearchIndex?: number
+  }>(),
+  {
+    searchQuery: '',
+    activeSearchIndex: -1,
+  },
+)
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
@@ -59,6 +72,10 @@ const editor = useEditor((root) =>
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, props.modelValue)
+      ctx.update(prosePluginsCtx, (plugins) => [
+        ...plugins,
+        createSearchHighlightPlugin(currentSearchHighlightState()),
+      ])
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
         lastMarkdown = markdown
         emit('update:modelValue', markdown)
@@ -86,6 +103,7 @@ onMounted(() => {
     })
   }
   void resolveWorkspaceImages()
+  updateSearchHighlights()
   window.addEventListener('resize', positionImageResizeHandle)
   window.addEventListener('scroll', positionImageResizeHandle, true)
 })
@@ -166,6 +184,42 @@ function shouldResolveWorkspaceImageSource(source: string) {
     !trimmed.startsWith('http://') &&
     !trimmed.startsWith('https://')
   )
+}
+
+function currentSearchHighlightState(): SearchHighlightState {
+  return {
+    query: props.searchQuery,
+    activeIndex: props.activeSearchIndex,
+  }
+}
+
+function updateSearchHighlights() {
+  const instance = editor.get()
+  if (!instance) {
+    return
+  }
+
+  instance.action((ctx) => {
+    try {
+      const view = ctx.get(editorViewCtx)
+      if (!searchHighlightPluginKey.get(view.state)) {
+        return
+      }
+
+      const nextState = currentSearchHighlightState()
+      const currentState = searchHighlightPluginKey.getState(view.state)
+      if (
+        currentState?.query === nextState.query &&
+        currentState.activeIndex === nextState.activeIndex
+      ) {
+        return
+      }
+
+      view.dispatch(view.state.tr.setMeta(searchHighlightPluginKey, nextState))
+    } catch {
+      // The editor view is not available during early setup.
+    }
+  })
 }
 
 function handleHostPointerDown(event: PointerEvent) {
@@ -385,6 +439,7 @@ watch(
   () => {
     lastMarkdown = props.modelValue
     editor.get()?.action(replaceAll(props.modelValue, true))
+    updateSearchHighlights()
     void resolveWorkspaceImages()
   },
 )
@@ -397,7 +452,15 @@ watch(
     }
     lastMarkdown = value
     editor.get()?.action(replaceAll(value, true))
+    updateSearchHighlights()
     void resolveWorkspaceImages()
+  },
+)
+
+watch(
+  () => [props.searchQuery, props.activeSearchIndex] as const,
+  () => {
+    updateSearchHighlights()
   },
 )
 </script>

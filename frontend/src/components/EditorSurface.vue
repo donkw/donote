@@ -5,11 +5,19 @@ import MilkdownEditor from './MilkdownEditor.vue'
 
 type ResolveImageSource = (source: string, activePath: string) => Promise<string>
 
-defineProps<{
-  document: OpenDocument | null
-  modelValue: string
-  resolveImageSource?: ResolveImageSource
-}>()
+withDefaults(
+  defineProps<{
+    document: OpenDocument | null
+    modelValue: string
+    resolveImageSource?: ResolveImageSource
+    searchQuery?: string
+    activeSearchIndex?: number
+  }>(),
+  {
+    searchQuery: '',
+    activeSearchIndex: -1,
+  },
+)
 
 defineEmits<{
   (event: 'update:modelValue', value: string): void
@@ -24,6 +32,8 @@ defineEmits<{
       <MilkdownEditor
         :model-value="modelValue"
         :active-path="document.path"
+        :search-query="searchQuery"
+        :active-search-index="activeSearchIndex"
         :resolve-image-source="resolveImageSource"
         @update:model-value="$emit('update:modelValue', $event)"
         @paste-files="$emit('paste-files', $event)"

@@ -673,6 +673,17 @@ textarea:focus-visible {
   outline-offset: 3px;
 }
 
+.milkdown-editor .ProseMirror .donote-search-match {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--warning), transparent 62%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warning), transparent 50%);
+}
+
+.milkdown-editor .ProseMirror .donote-search-match--active {
+  background: color-mix(in srgb, var(--accent), transparent 48%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent), transparent 28%);
+}
+
 .image-resize-handle {
   position: absolute;
   z-index: 8;

@@ -10,6 +10,8 @@
         <MilkdownHost
           :active-path="activePath"
           :model-value="modelValue"
+          :search-query="searchQuery"
+          :active-search-index="activeSearchIndex"
           :resolve-image-source="resolveImageSource"
           @update:model-value="emitUpdate"
         />
@@ -25,11 +27,19 @@ import MilkdownHost from './MilkdownHost.vue'
 
 type ResolveImageSource = (source: string, activePath: string) => Promise<string>
 
-defineProps<{
-  modelValue: string
-  activePath: string
-  resolveImageSource?: ResolveImageSource
-}>()
+withDefaults(
+  defineProps<{
+    modelValue: string
+    activePath: string
+    resolveImageSource?: ResolveImageSource
+    searchQuery?: string
+    activeSearchIndex?: number
+  }>(),
+  {
+    searchQuery: '',
+    activeSearchIndex: -1,
+  },
+)
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void

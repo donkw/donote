@@ -10,6 +10,8 @@ vi.mock('./MilkdownEditor.vue', () => ({
       modelValue: { type: String, required: true },
       activePath: { type: String, required: true },
       resolveImageSource: { type: Function, default: undefined },
+      searchQuery: { type: String, default: '' },
+      activeSearchIndex: { type: Number, default: -1 },
     },
     emits: ['update:modelValue', 'paste-files', 'insert-markdown'],
     template: `
@@ -59,11 +61,15 @@ describe('EditorSurface', () => {
       props: {
         document,
         modelValue: '# Draft',
+        searchQuery: 'Draft',
+        activeSearchIndex: 0,
       },
     })
 
     expect(wrapper.find('.milkdown-shell').exists()).toBe(false)
     expect(wrapper.find('.milkdown-editor').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'MilkdownEditor' }).props('searchQuery')).toBe('Draft')
+    expect(wrapper.findComponent({ name: 'MilkdownEditor' }).props('activeSearchIndex')).toBe(0)
 
     await wrapper.get('[data-test="mock-editor"]').setValue('# Revised')
 
