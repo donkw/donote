@@ -107,6 +107,14 @@ func (a *App) CreateMarkdown(parentRelativePath string, name string) (FileNode, 
 	return service.CreateMarkdown(parentRelativePath, name)
 }
 
+func (a *App) CreateFolder(parentRelativePath string, name string) (FileNode, error) {
+	service, err := a.requireWorkspace()
+	if err != nil {
+		return FileNode{}, err
+	}
+	return service.CreateFolder(parentRelativePath, name)
+}
+
 func (a *App) RenamePath(relativePath string, newName string) (FileNode, error) {
 	service, err := a.requireWorkspace()
 	if err != nil {

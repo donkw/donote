@@ -5,10 +5,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import App from './App.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
+  CreateFolder,
   CreateMarkdown,
+  DeletePath,
   ListWorkspace,
   OpenWorkspace,
   ReadMarkdown,
+  RenamePath,
   SaveMarkdown,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -38,6 +41,9 @@ vi.mock('../wailsjs/go/main/App', () => ({
   ReadMarkdown: vi.fn(),
   SaveMarkdown: vi.fn().mockResolvedValue({ path: 'intro.md', savedAt: 'now' }),
   CreateMarkdown: vi.fn(),
+  CreateFolder: vi.fn(),
+  RenamePath: vi.fn(),
+  DeletePath: vi.fn(),
 }))
 
 vi.mock('../wailsjs/runtime/runtime', () => ({
@@ -616,6 +622,282 @@ describe('App shell', () => {
     expect(ListWorkspace).toHaveBeenCalled()
     expect(SelectWorkspace).not.toHaveBeenCalled()
     expect(ReadMarkdown).toHaveBeenCalledWith('new.md')
+  })
+
+  test('creates a markdown file from a folder context menu and opens it', async () => {
+    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'plan.md' })
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'projects',
+          path: 'projects',
+          type: 'folder',
+          children: [],
+        } as any,
+      ],
+    } as any)
+    vi.mocked(CreateMarkdown).mockResolvedValue({
+      name: 'plan.md',
+      path: 'projects/plan.md',
+      type: 'file',
+    } as any)
+    vi.mocked(ListWorkspace).mockResolvedValue([
+      {
+        name: 'projects',
+        path: 'projects',
+        type: 'folder',
+        children: [
+          {
+            name: 'plan.md',
+            path: 'projects/plan.md',
+            type: 'file',
+          },
+        ],
+      } as any,
+    ])
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'projects/plan.md',
+      name: 'plan.md',
+      content: '# Plan',
+    })
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 28,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-create-markdown"]').trigger('click')
+    await flushPromises()
+
+    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
+      '请输入笔记名称',
+      '新建笔记',
+      expect.objectContaining({
+        inputValue: '未命名.md',
+        confirmButtonText: '创建',
+        cancelButtonText: '取消',
+      }),
+    )
+    expect(CreateMarkdown).toHaveBeenCalledWith('projects', 'plan.md')
+    expect(ListWorkspace).toHaveBeenCalled()
+    expect(ReadMarkdown).toHaveBeenCalledWith('projects/plan.md')
+    expect(wrapper.find('[data-test="tab-projects/plan.md"]').exists()).toBe(true)
+  })
+
+  test('creates a child folder from a folder context menu', async () => {
+    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'archive' })
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'projects',
+          path: 'projects',
+          type: 'folder',
+          children: [],
+        } as any,
+      ],
+    } as any)
+    vi.mocked(CreateFolder).mockResolvedValue({
+      name: 'archive',
+      path: 'projects/archive',
+      type: 'folder',
+    } as any)
+    vi.mocked(ListWorkspace).mockResolvedValue([
+      {
+        name: 'projects',
+        path: 'projects',
+        type: 'folder',
+        children: [
+          {
+            name: 'archive',
+            path: 'projects/archive',
+            type: 'folder',
+            children: [],
+          },
+        ],
+      } as any,
+    ])
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 28,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-create-folder"]').trigger('click')
+    await flushPromises()
+
+    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
+      '请输入文件夹名称',
+      '新建子目录',
+      expect.objectContaining({
+        inputValue: '新建文件夹',
+        confirmButtonText: '创建',
+        cancelButtonText: '取消',
+      }),
+    )
+    expect(CreateFolder).toHaveBeenCalledWith('projects', 'archive')
+    expect(ListWorkspace).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('archive')
+  })
+
+  test('renames a tree file from the context menu and keeps the open tab path current', async () => {
+    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'renamed.md' })
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+    vi.mocked(RenamePath).mockResolvedValue({
+      name: 'renamed.md',
+      path: 'renamed.md',
+      type: 'file',
+    } as any)
+    vi.mocked(ListWorkspace).mockResolvedValue([
+      {
+        name: 'renamed.md',
+        path: 'renamed.md',
+        type: 'file',
+      } as any,
+    ])
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="file-intro.md"]').trigger('contextmenu', {
+      clientX: 28,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-rename"]').trigger('click')
+    await flushPromises()
+
+    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
+      '请输入新的名称',
+      '重命名',
+      expect.objectContaining({
+        inputValue: 'intro.md',
+        confirmButtonText: '重命名',
+        cancelButtonText: '取消',
+      }),
+    )
+    expect(RenamePath).toHaveBeenCalledWith('intro.md', 'renamed.md')
+    expect(ListWorkspace).toHaveBeenCalled()
+    expect(wrapper.find('[data-test="tab-renamed.md"]').exists()).toBe(true)
+    expect(window.localStorage.getItem('donote.openDocuments')).toContain('renamed.md')
+  })
+
+  test('renames a tree folder from the context menu', async () => {
+    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'archive' })
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'projects',
+          path: 'projects',
+          type: 'folder',
+          children: [],
+        } as any,
+      ],
+    } as any)
+    vi.mocked(RenamePath).mockResolvedValue({
+      name: 'archive',
+      path: 'archive',
+      type: 'folder',
+    } as any)
+    vi.mocked(ListWorkspace).mockResolvedValue([
+      {
+        name: 'archive',
+        path: 'archive',
+        type: 'folder',
+        children: [],
+      } as any,
+    ])
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 28,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-rename"]').trigger('click')
+    await flushPromises()
+
+    expect(RenamePath).toHaveBeenCalledWith('projects', 'archive')
+    expect(ListWorkspace).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('archive')
+  })
+
+  test('deletes a tree file from the context menu and closes its open tab', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+    vi.mocked(DeletePath).mockResolvedValue(undefined)
+    vi.mocked(ListWorkspace).mockResolvedValue([])
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="file-intro.md"]').trigger('contextmenu', {
+      clientX: 28,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-delete"]').trigger('click')
+    await flushPromises()
+
+    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
+      '删除「intro.md」？此操作无法撤销。',
+      '删除项目',
+      expect.objectContaining({
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }),
+    )
+    expect(DeletePath).toHaveBeenCalledWith('intro.md')
+    expect(ListWorkspace).toHaveBeenCalled()
+    expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(false)
+    expect(window.localStorage.getItem('donote.openDocuments')).toBeNull()
   })
 
   test('does not create a note when the Element Plus prompt is cancelled or empty', async () => {

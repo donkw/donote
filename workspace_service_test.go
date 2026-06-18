@@ -84,6 +84,40 @@ func TestWorkspaceServiceReadSaveCreateRenameDeleteMarkdown(t *testing.T) {
 	}
 }
 
+func TestWorkspaceServiceCreateFolder(t *testing.T) {
+	root := t.TempDir()
+	mustMkdir(t, filepath.Join(root, "projects"))
+	service, err := NewWorkspaceService(root)
+	if err != nil {
+		t.Fatalf("NewWorkspaceService() error = %v", err)
+	}
+
+	created, err := service.CreateFolder("projects", "archive")
+	if err != nil {
+		t.Fatalf("CreateFolder() error = %v", err)
+	}
+	if created.Path != "projects/archive" || created.Name != "archive" || created.Type != "folder" {
+		t.Fatalf("unexpected created folder node: %#v", created)
+	}
+	info, err := os.Stat(filepath.Join(root, "projects", "archive"))
+	if err != nil {
+		t.Fatalf("expected folder to exist: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatalf("expected created path to be a folder")
+	}
+
+	if _, err := service.CreateFolder("projects", "archive"); err == nil {
+		t.Fatal("CreateFolder(duplicate) expected error")
+	}
+	if _, err := service.CreateFolder("projects", "../escape"); err == nil {
+		t.Fatal("CreateFolder(unsafe name) expected error")
+	}
+	if _, err := service.CreateFolder("../escape", "notes"); err == nil {
+		t.Fatal("CreateFolder(unsafe parent) expected error")
+	}
+}
+
 func TestWorkspaceServiceRejectsUnsafePathsAndNonMarkdownWrites(t *testing.T) {
 	root := t.TempDir()
 	service, err := NewWorkspaceService(root)

@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Search } from '@lucide/vue'
 import { ElEmpty, ElInput, ElScrollbar, ElTree } from 'element-plus'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { main } from '../../wailsjs/go/models'
 
 const workspaceRootPath = '__donote_workspace_root__'
+type ContextActionKey = 'create-folder' | 'create-markdown' | 'rename' | 'delete'
+type ContextMenuState = {
+  node: main.FileNode
+  x: number
+  y: number
+}
 
 const props = defineProps<{
   workspaceName: string
@@ -17,6 +23,10 @@ const emit = defineEmits<{
   (event: 'select-file', path: string): void
   (event: 'folder-expanded', path: string): void
   (event: 'folder-collapsed', path: string): void
+  (event: 'create-folder', parentPath: string): void
+  (event: 'create-markdown', parentPath: string): void
+  (event: 'rename-node', path: string): void
+  (event: 'delete-node', path: string): void
 }>()
 
 const treeProps = {
@@ -28,6 +38,7 @@ const treeProps = {
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const fileTreeQuery = ref('')
 const workspaceRootCollapsed = ref(false)
+const contextMenu = ref<ContextMenuState | null>(null)
 
 const displayTree = computed<main.FileNode[]>(() => {
   if (!props.workspaceName) {
@@ -50,6 +61,28 @@ const expandedTreeKeys = computed(() => {
   return [workspaceRootPath, ...props.expandedFolderPaths]
 })
 
+const contextActions = computed<Array<{ key: ContextActionKey; label: string }>>(() => {
+  const node = contextMenu.value?.node
+  if (!node) {
+    return []
+  }
+  if (node.type === 'file') {
+    return [
+      { key: 'rename', label: '重命名' },
+      { key: 'delete', label: '删除' },
+    ]
+  }
+
+  const createActions: Array<{ key: ContextActionKey; label: string }> = [
+    { key: 'create-folder', label: '新建子目录' },
+    { key: 'create-markdown', label: '新建 md' },
+  ]
+  if (node.path === workspaceRootPath) {
+    return createActions
+  }
+  return [...createActions, { key: 'rename', label: '重命名' }]
+})
+
 watch(fileTreeQuery, (query) => {
   treeRef.value?.filter(query)
 })
@@ -58,10 +91,22 @@ watch(
   () => props.workspaceName,
   () => {
     workspaceRootCollapsed.value = false
+    closeContextMenu()
   },
 )
 
+onMounted(() => {
+  window.addEventListener('click', closeContextMenu)
+  window.addEventListener('keydown', closeContextMenuFromKeyboard)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', closeContextMenu)
+  window.removeEventListener('keydown', closeContextMenuFromKeyboard)
+})
+
 function handleNodeClick(node: main.FileNode) {
+  closeContextMenu()
   if (node.type === 'file') {
     emit('select-file', node.path)
     return
@@ -109,6 +154,52 @@ function treeNodeTestId(node: main.FileNode) {
     return 'workspace-root'
   }
   return node.type === 'file' ? `file-${node.path}` : `folder-${node.path}`
+}
+
+function openContextMenu(event: MouseEvent, node: main.FileNode) {
+  event.preventDefault()
+  event.stopPropagation()
+  const host = (event.currentTarget as HTMLElement).closest('.workspace-sidebar')
+  const bounds = host?.getBoundingClientRect()
+  contextMenu.value = {
+    node,
+    x: Math.max(8, bounds ? event.clientX - bounds.left : event.clientX),
+    y: Math.max(8, bounds ? event.clientY - bounds.top : event.clientY),
+  }
+}
+
+function closeContextMenu() {
+  contextMenu.value = null
+}
+
+function closeContextMenuFromKeyboard(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closeContextMenu()
+  }
+}
+
+function runContextAction(action: ContextActionKey) {
+  const node = contextMenu.value?.node
+  if (!node) {
+    return
+  }
+  closeContextMenu()
+
+  if (action === 'create-folder') {
+    emit('create-folder', node.path === workspaceRootPath ? '' : node.path)
+    return
+  }
+  if (action === 'create-markdown') {
+    emit('create-markdown', node.path === workspaceRootPath ? '' : node.path)
+    return
+  }
+  if (action === 'rename' && node.path !== workspaceRootPath) {
+    emit('rename-node', node.path)
+    return
+  }
+  if (action === 'delete' && node.type === 'file') {
+    emit('delete-node', node.path)
+  }
 }
 
 function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
@@ -172,6 +263,7 @@ function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
             :style="treeNodeStyle(node.level)"
             type="button"
             @click.stop="handleNodeClick(data)"
+            @contextmenu.prevent.stop="openContextMenu($event, data)"
           >
             <ChevronRight v-if="data.type === 'folder' && !node.expanded" :size="14" />
             <ChevronDown v-else-if="data.type === 'folder'" :size="14" />
@@ -183,5 +275,27 @@ function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
         </template>
       </ElTree>
     </ElScrollbar>
+
+    <div
+      v-if="contextMenu"
+      data-test="file-tree-context-menu"
+      class="file-tree-context-menu"
+      role="menu"
+      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+      @click.stop
+    >
+      <button
+        v-for="action in contextActions"
+        :key="action.key"
+        class="context-menu-item"
+        :class="{ danger: action.key === 'delete' }"
+        :data-test="`context-${action.key}`"
+        type="button"
+        role="menuitem"
+        @click="runContextAction(action.key)"
+      >
+        {{ action.label }}
+      </button>
+    </div>
   </aside>
 </template>

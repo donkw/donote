@@ -2,10 +2,13 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
+  CreateFolder,
   CreateMarkdown,
+  DeletePath,
   ListWorkspace,
   OpenWorkspace,
   ReadMarkdown,
+  RenamePath,
   SaveMarkdown,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -248,6 +251,11 @@ async function createNote() {
     await openWorkspace()
     if (!workspace.value) return
   }
+  await createMarkdownInTree('')
+}
+
+async function createMarkdownInTree(parentPath: string) {
+  if (!workspace.value) return
   let name = ''
   try {
     const result = await ElMessageBox.prompt('请输入笔记名称', '新建笔记', {
@@ -262,9 +270,91 @@ async function createNote() {
   if (!name) return
 
   try {
-    const node = await CreateMarkdown('', name)
+    const node = await CreateMarkdown(parentPath, name)
     workspace.value.tree = await reloadTreeFromCurrentWorkspace()
+    if (parentPath) {
+      setFolderCollapsed(parentPath, false)
+    }
     await selectFile(node.path)
+  } catch (error) {
+    setError(error)
+  }
+}
+
+async function createFolderInTree(parentPath: string) {
+  if (!workspace.value) return
+  let name = ''
+  try {
+    const result = await ElMessageBox.prompt('请输入文件夹名称', '新建子目录', {
+      inputValue: '新建文件夹',
+      confirmButtonText: '创建',
+      cancelButtonText: '取消',
+    })
+    name = result.value.trim()
+  } catch {
+    return
+  }
+  if (!name) return
+
+  try {
+    await CreateFolder(parentPath, name)
+    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
+    if (parentPath) {
+      setFolderCollapsed(parentPath, false)
+    }
+  } catch (error) {
+    setError(error)
+  }
+}
+
+async function renameTreeNode(path: string) {
+  if (!workspace.value) return
+  const node = findTreeNode(path)
+  if (!node) return
+
+  let name = ''
+  try {
+    const result = await ElMessageBox.prompt('请输入新的名称', '重命名', {
+      inputValue: node.name,
+      confirmButtonText: '重命名',
+      cancelButtonText: '取消',
+    })
+    name = result.value.trim()
+  } catch {
+    return
+  }
+  if (!name) return
+
+  try {
+    const renamed = await RenamePath(path, name)
+    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
+    updateCollapsedFolderPathsAfterRename(path, renamed.path)
+    updateOpenDocumentsAfterRename(path, renamed)
+  } catch (error) {
+    setError(error)
+  }
+}
+
+async function deleteTreeNode(path: string) {
+  if (!workspace.value) return
+  const node = findTreeNode(path)
+  if (!node) return
+
+  try {
+    await ElMessageBox.confirm(`删除「${node.name}」？此操作无法撤销。`, '删除项目', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+
+  try {
+    await DeletePath(path)
+    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
+    updateCollapsedFolderPathsAfterDelete(path)
+    updateOpenDocumentsAfterDelete(path)
   } catch (error) {
     setError(error)
   }
@@ -483,6 +573,60 @@ function persistOpenDocumentSession() {
   })
 }
 
+function findTreeNode(path: string, nodes = workspace.value?.tree ?? []): main.FileNode | null {
+  for (const node of nodes) {
+    if (node.path === path) {
+      return node
+    }
+    const child = findTreeNode(path, node.children ?? [])
+    if (child) {
+      return child
+    }
+  }
+  return null
+}
+
+function updateOpenDocumentsAfterRename(oldPath: string, renamed: main.FileNode) {
+  const oldPrefix = `${oldPath}/`
+  const newPrefix = `${renamed.path}/`
+  openDocuments.value = openDocuments.value.map((document) => {
+    if (document.path === oldPath) {
+      return { ...document, path: renamed.path, name: renamed.name }
+    }
+    if (document.path.startsWith(oldPrefix)) {
+      return {
+        ...document,
+        path: `${newPrefix}${document.path.slice(oldPrefix.length)}`,
+      }
+    }
+    return document
+  })
+
+  if (activeDocumentPath.value === oldPath) {
+    activeDocumentPath.value = renamed.path
+  } else if (activeDocumentPath.value.startsWith(oldPrefix)) {
+    activeDocumentPath.value = `${newPrefix}${activeDocumentPath.value.slice(oldPrefix.length)}`
+  }
+  persistOpenDocumentSession()
+}
+
+function updateOpenDocumentsAfterDelete(path: string) {
+  const deletedIndex = openDocuments.value.findIndex((document) =>
+    isPathInsideTreeItem(document.path, path),
+  )
+  openDocuments.value = openDocuments.value.filter(
+    (document) => !isPathInsideTreeItem(document.path, path),
+  )
+
+  if (isPathInsideTreeItem(activeDocumentPath.value, path)) {
+    activeDocumentPath.value =
+      openDocuments.value[deletedIndex]?.path ??
+      openDocuments.value[Math.max(0, deletedIndex - 1)]?.path ??
+      ''
+  }
+  persistOpenDocumentSession()
+}
+
 function collectFolderPaths(nodes: main.FileNode[]): string[] {
   return nodes.flatMap((node) => {
     if (node.type !== 'folder') return []
@@ -499,6 +643,30 @@ function setFolderCollapsed(path: string, collapsed: boolean) {
   saveCollapsedFolderPaths(workspace.value.rootPath, [...next])
 }
 
+function updateCollapsedFolderPathsAfterRename(oldPath: string, newPath: string) {
+  if (!workspace.value) return
+  const oldPrefix = `${oldPath}/`
+  const newPrefix = `${newPath}/`
+  const next = [...collapsedFolderPaths.value].map((path) => {
+    if (path === oldPath) return newPath
+    if (path.startsWith(oldPrefix)) {
+      return `${newPrefix}${path.slice(oldPrefix.length)}`
+    }
+    return path
+  })
+  collapsedFolderPaths.value = new Set(next)
+  saveCollapsedFolderPaths(workspace.value.rootPath, next)
+}
+
+function updateCollapsedFolderPathsAfterDelete(path: string) {
+  if (!workspace.value) return
+  const next = [...collapsedFolderPaths.value].filter(
+    (collapsedPath) => !isPathInsideTreeItem(collapsedPath, path),
+  )
+  collapsedFolderPaths.value = new Set(next)
+  saveCollapsedFolderPaths(workspace.value.rootPath, next)
+}
+
 function isCollapsedOrInsideCollapsedFolder(path: string, collapsedPaths: Set<string>) {
   for (const collapsedPath of collapsedPaths) {
     if (path === collapsedPath || path.startsWith(`${collapsedPath}/`)) {
@@ -506,6 +674,10 @@ function isCollapsedOrInsideCollapsedFolder(path: string, collapsedPaths: Set<st
     }
   }
   return false
+}
+
+function isPathInsideTreeItem(path: string, treeItemPath: string) {
+  return path === treeItemPath || path.startsWith(`${treeItemPath}/`)
 }
 
 function setError(error: unknown) {
@@ -549,6 +721,10 @@ function setError(error: unknown) {
         @select-file="selectFile"
         @folder-expanded="setFolderCollapsed($event, false)"
         @folder-collapsed="setFolderCollapsed($event, true)"
+        @create-folder="createFolderInTree"
+        @create-markdown="createMarkdownInTree"
+        @rename-node="renameTreeNode"
+        @delete-node="deleteTreeNode"
       />
       <button
         v-if="showSidebar"

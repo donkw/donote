@@ -74,6 +74,101 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.emitted('select-file')).toEqual([['projects/archive/plan.md']])
   })
 
+  test('opens file context menu and emits rename and delete actions', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects', 'projects/archive'],
+      },
+    })
+
+    await wrapper
+      .get('[data-test="file-projects/archive/plan.md"]')
+      .trigger('contextmenu', { clientX: 48, clientY: 72 })
+
+    const menu = wrapper.get('[data-test="file-tree-context-menu"]')
+    expect(menu.text()).toContain('重命名')
+    expect(menu.text()).toContain('删除')
+    expect(menu.text()).not.toContain('新建子目录')
+    expect(menu.text()).not.toContain('新建 md')
+
+    await wrapper.get('[data-test="context-rename"]').trigger('click')
+    expect(wrapper.emitted('rename-node')).toEqual([['projects/archive/plan.md']])
+
+    await wrapper
+      .get('[data-test="file-projects/archive/plan.md"]')
+      .trigger('contextmenu', { clientX: 48, clientY: 72 })
+    await wrapper.get('[data-test="context-delete"]').trigger('click')
+
+    expect(wrapper.emitted('delete-node')).toEqual([['projects/archive/plan.md']])
+  })
+
+  test('opens folder context menu and emits creation and rename actions', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects', 'projects/archive'],
+      },
+    })
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 32,
+      clientY: 64,
+    })
+
+    const menu = wrapper.get('[data-test="file-tree-context-menu"]')
+    expect(menu.text()).toContain('新建子目录')
+    expect(menu.text()).toContain('新建 md')
+    expect(menu.text()).toContain('重命名')
+    expect(menu.text()).not.toContain('删除')
+
+    await wrapper.get('[data-test="context-create-folder"]').trigger('click')
+    expect(wrapper.emitted('create-folder')).toEqual([['projects']])
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 32,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-create-markdown"]').trigger('click')
+    expect(wrapper.emitted('create-markdown')).toEqual([['projects']])
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 32,
+      clientY: 64,
+    })
+    await wrapper.get('[data-test="context-rename"]').trigger('click')
+    expect(wrapper.emitted('rename-node')).toEqual([['projects']])
+  })
+
+  test('uses the workspace root context menu for root-level creation only', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects', 'projects/archive'],
+      },
+    })
+
+    await wrapper.get('[data-test="workspace-root"]').trigger('contextmenu', {
+      clientX: 16,
+      clientY: 32,
+    })
+
+    const menu = wrapper.get('[data-test="file-tree-context-menu"]')
+    expect(menu.text()).toContain('新建子目录')
+    expect(menu.text()).toContain('新建 md')
+    expect(menu.text()).not.toContain('重命名')
+    expect(menu.text()).not.toContain('删除')
+
+    await wrapper.get('[data-test="context-create-markdown"]').trigger('click')
+    expect(wrapper.emitted('create-markdown')).toEqual([['']])
+  })
+
   test('clicking a folder emits exactly one collapse intent', async () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {

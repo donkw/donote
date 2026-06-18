@@ -152,6 +152,36 @@ func (s *WorkspaceService) CreateMarkdown(parentRelativePath string, name string
 	return FileNode{Name: fileName, Path: relative, Type: "file"}, nil
 }
 
+func (s *WorkspaceService) CreateFolder(parentRelativePath string, name string) (FileNode, error) {
+	parentPath, cleanParent, err := s.resolvePath(parentRelativePath, true)
+	if err != nil {
+		return FileNode{}, err
+	}
+	info, err := os.Stat(parentPath)
+	if err != nil {
+		return FileNode{}, fmt.Errorf("父文件夹不存在: %w", err)
+	}
+	if !info.IsDir() {
+		return FileNode{}, errors.New("只能在文件夹中创建子目录")
+	}
+
+	folderName, err := normalizeFolderName(name)
+	if err != nil {
+		return FileNode{}, err
+	}
+	relative := joinRelative(cleanParent, folderName)
+	fullPath := filepath.Join(parentPath, folderName)
+	if _, err := os.Stat(fullPath); err == nil {
+		return FileNode{}, errors.New("同名文件夹已存在")
+	} else if !os.IsNotExist(err) {
+		return FileNode{}, fmt.Errorf("检查文件夹失败: %w", err)
+	}
+	if err := os.Mkdir(fullPath, 0o755); err != nil {
+		return FileNode{}, fmt.Errorf("创建文件夹失败: %w", err)
+	}
+	return FileNode{Name: folderName, Path: relative, Type: "folder"}, nil
+}
+
 func (s *WorkspaceService) RenamePath(relativePath string, newName string) (FileNode, error) {
 	oldPath, cleanRelative, err := s.resolvePath(relativePath, false)
 	if err != nil {
@@ -309,6 +339,14 @@ func normalizeMarkdownName(name string) (string, error) {
 	}
 	if !isMarkdown(trimmed) {
 		return "", errors.New("笔记名称必须以 .md 结尾")
+	}
+	return trimmed, nil
+}
+
+func normalizeFolderName(name string) (string, error) {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" || trimmed == "." || trimmed == ".." || strings.ContainsAny(trimmed, `/\`) {
+		return "", errors.New("文件夹名称不能为空且不能包含路径分隔符")
 	}
 	return trimmed, nil
 }

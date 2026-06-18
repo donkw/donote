@@ -316,6 +316,7 @@ textarea:focus-visible {
 
 .workspace-sidebar,
 .sidebar {
+  position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
@@ -536,6 +537,50 @@ textarea:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.file-tree-context-menu {
+  position: absolute;
+  z-index: 30;
+  display: grid;
+  min-width: 144px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 14px 34px rgb(15 23 42 / 14%);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  outline: 0;
+}
+
+.context-menu-item.danger {
+  color: var(--danger, #dc2626);
+}
+
+.context-menu-item.danger:hover,
+.context-menu-item.danger:focus-visible {
+  background: color-mix(in srgb, var(--danger, #dc2626), transparent 88%);
+  color: var(--danger, #dc2626);
 }
 
 .editor-pane {
