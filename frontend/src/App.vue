@@ -898,6 +898,7 @@ function setError(error: unknown) {
           @update:query="searchQuery = $event"
           @previous="goToPreviousMatch"
           @next="goToNextMatch"
+          @close="closeEditorSearch"
         />
 
         <EditorSurface

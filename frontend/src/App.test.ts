@@ -1358,7 +1358,7 @@ describe('App shell', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('1/3')
 
-    await wrapper.get('[data-test="utility-search"]').trigger('click')
+    await wrapper.get('[data-test="search-close"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
@@ -1369,6 +1369,14 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-test="search-input"]').exists()).toBe(true)
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('searchQuery')).toBe('')
+
+    await wrapper.get('[data-test="search-input"]').setValue('Intro')
+    await flushPromises()
+    await wrapper.get('[data-test="utility-search"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('searchQuery')).toBe('')
   })
 })

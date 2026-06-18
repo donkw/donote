@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search } from '@lucide/vue'
+import { Search, X } from '@lucide/vue'
 import { ElButton, ElInput } from 'element-plus'
 import { ref } from 'vue'
 import type { SearchResult } from '../lib/search'
@@ -16,6 +16,7 @@ defineEmits<{
   (event: 'update:query', value: string): void
   (event: 'previous'): void
   (event: 'next'): void
+  (event: 'close'): void
 }>()
 
 function focus() {
@@ -44,6 +45,15 @@ defineExpose({ focus })
       </span>
       <ElButton data-test="search-previous" @click="$emit('previous')">上一个</ElButton>
       <ElButton data-test="search-next" @click="$emit('next')">下一个</ElButton>
+      <ElButton
+        data-test="search-close"
+        aria-label="关闭搜索"
+        title="关闭搜索"
+        circle
+        @click="$emit('close')"
+      >
+        <X :size="16" />
+      </ElButton>
     </div>
   </div>
 </template>
