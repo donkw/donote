@@ -167,6 +167,44 @@ describe('App shell', () => {
     expect(wrapper.text()).toContain('intro.md')
   })
 
+  test('restores the last opened markdown documents after restoring the workspace', async () => {
+    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
+    window.localStorage.setItem(
+      'donote.openDocuments',
+      '{"rootPath":"D:/notes","paths":["intro.md","next.md"],"activePath":"next.md"}',
+    )
+    vi.mocked(OpenWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+        {
+          name: 'next.md',
+          path: 'next.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockImplementation(async (path) => ({
+      path,
+      name: path,
+      content: path === 'intro.md' ? '# Intro' : '# Next',
+    }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(ReadMarkdown).toHaveBeenCalledWith('intro.md')
+    expect(ReadMarkdown).toHaveBeenCalledWith('next.md')
+    expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="tab-next.md"]').exists()).toBe(true)
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Next')
+  })
+
   test('opens a workspace and loads a markdown document from the file tree', async () => {
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
@@ -707,6 +745,16 @@ describe('App shell', () => {
     await wrapper.vm.$nextTick()
 
     expect(window.localStorage.getItem('donote.sidebarWidth')).toBe('356')
+  })
+
+  test('uses the saved sidebar width on startup', () => {
+    window.localStorage.setItem('donote.sidebarWidth', '372')
+
+    const wrapper = mount(App)
+
+    expect(wrapper.get('[data-test="workspace-layout"]').attributes('style')).toContain(
+      '--sidebar-width: 372px',
+    )
   })
 
   test('opens search in the utility drawer from Ctrl+F', async () => {

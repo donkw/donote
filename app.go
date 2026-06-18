@@ -30,6 +30,12 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+func (a *App) beforeClose(ctx context.Context) bool {
+	width, height := runtime.WindowGetSize(ctx)
+	_ = saveWindowState(WindowState{Width: width, Height: height})
+	return false
+}
+
 func (a *App) applicationMenu() *menu.Menu {
 	appMenu := menu.NewMenu()
 	fileMenu := appMenu.AddSubmenu("文件")

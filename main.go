@@ -14,17 +14,21 @@ var assets embed.FS
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
+	windowState := loadWindowState()
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "donote",
-		Width:  1024,
-		Height: 768,
+		Title:     "donote",
+		Width:     windowState.Width,
+		Height:    windowState.Height,
+		MinWidth:  minWindowWidth,
+		MinHeight: minWindowHeight,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,
+		OnBeforeClose:    app.beforeClose,
 		Menu:             app.applicationMenu(),
 		Bind: []interface{}{
 			app,

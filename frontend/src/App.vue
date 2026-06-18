@@ -29,6 +29,11 @@ import {
   type LayoutFontSizeArea,
   type LayoutFontSizes,
 } from './lib/layoutFontSizes'
+import {
+  clearOpenDocumentSession,
+  getInitialOpenDocumentSession,
+  saveOpenDocumentSession,
+} from './lib/openDocumentSession'
 import { extractOutline } from './lib/outline'
 import { findMatches, nextMatchIndex, previousMatchIndex } from './lib/search'
 import {
@@ -147,6 +152,7 @@ async function openWorkspace() {
       return
     }
     applyWorkspaceInfo(selected)
+    persistOpenDocumentSession()
     window.localStorage.setItem(lastWorkspaceStorageKey, selected.rootPath)
   } catch (error) {
     setError(error)
@@ -165,6 +171,7 @@ async function restoreLastWorkspace() {
   try {
     const restored = await OpenWorkspace(lastWorkspaceRoot)
     applyWorkspaceInfo(restored)
+    await restoreOpenDocumentsForWorkspace(restored.rootPath)
   } catch {
     window.localStorage.removeItem(lastWorkspaceStorageKey)
   } finally {
@@ -181,6 +188,32 @@ function applyWorkspaceInfo(info: main.WorkspaceInfo) {
   activeSearchIndex.value = -1
 }
 
+async function restoreOpenDocumentsForWorkspace(rootPath: string) {
+  const session = getInitialOpenDocumentSession()
+  if (!session || session.rootPath !== rootPath) {
+    return
+  }
+
+  loadingDocument.value = true
+  const restoredDocuments: OpenDocument[] = []
+  for (const path of session.paths) {
+    try {
+      const document = await ReadMarkdown(path)
+      restoredDocuments.push(createOpenDocument(document))
+    } catch {
+      // Skip files that were moved or deleted since the previous session.
+    }
+  }
+  openDocuments.value = restoredDocuments
+  activeDocumentPath.value =
+    restoredDocuments.find((document) => document.path === session.activePath)?.path ??
+    restoredDocuments[0]?.path ??
+    ''
+  loadingDocument.value = false
+  persistOpenDocumentSession()
+  await nextTick()
+}
+
 async function selectFile(path: string) {
   errorMessage.value = ''
   if (activeDocumentPath.value === path) {
@@ -191,22 +224,17 @@ async function selectFile(path: string) {
     activeDocumentPath.value = existing.path
     searchQuery.value = ''
     activeSearchIndex.value = -1
+    persistOpenDocumentSession()
     return
   }
   try {
     loadingDocument.value = true
     const document = await ReadMarkdown(path)
-    openDocuments.value.push({
-      path: document.path,
-      name: document.name,
-      content: document.content,
-      savedContent: document.content,
-      saving: false,
-      error: '',
-    })
+    openDocuments.value.push(createOpenDocument(document))
     activeDocumentPath.value = document.path
     searchQuery.value = ''
     activeSearchIndex.value = -1
+    persistOpenDocumentSession()
     await nextTick()
   } catch (error) {
     setError(error)
@@ -392,6 +420,7 @@ function switchDocument(path: string) {
   activeDocumentPath.value = path
   searchQuery.value = ''
   activeSearchIndex.value = -1
+  persistOpenDocumentSession()
 }
 
 async function closeDocument(document: OpenDocument) {
@@ -411,6 +440,7 @@ async function closeDocument(document: OpenDocument) {
   openDocuments.value = openDocuments.value.filter((item) => item.path !== document.path)
 
   if (activeDocumentPath.value !== document.path) {
+    persistOpenDocumentSession()
     return
   }
 
@@ -418,6 +448,7 @@ async function closeDocument(document: OpenDocument) {
     openDocuments.value[closedIndex]?.path ??
     openDocuments.value[Math.max(0, closedIndex - 1)]?.path ??
     ''
+  persistOpenDocumentSession()
 }
 
 function isDocumentDirty(document: OpenDocument): boolean {
@@ -426,6 +457,30 @@ function isDocumentDirty(document: OpenDocument): boolean {
 
 function normalizeMarkdownForDirtyCheck(content: string): string {
   return content.replace(/\s+$/g, '')
+}
+
+function createOpenDocument(document: main.Document): OpenDocument {
+  return {
+    path: document.path,
+    name: document.name,
+    content: document.content,
+    savedContent: document.content,
+    saving: false,
+    error: '',
+  }
+}
+
+function persistOpenDocumentSession() {
+  if (!workspace.value) {
+    clearOpenDocumentSession()
+    return
+  }
+
+  saveOpenDocumentSession({
+    rootPath: workspace.value.rootPath,
+    paths: openDocuments.value.map((document) => document.path),
+    activePath: activeDocumentPath.value,
+  })
 }
 
 function collectFolderPaths(nodes: main.FileNode[]): string[] {
