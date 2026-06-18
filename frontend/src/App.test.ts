@@ -636,13 +636,14 @@ describe('App shell', () => {
     expect(ElMessage.error).toHaveBeenCalledWith('无法读取笔记')
   })
 
-  test('applies layout font sizes only after saving the settings dialog', async () => {
+  test('applies layout settings only after saving the settings dialog', async () => {
     const wrapper = mount(App)
 
     const initialStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
     expect(initialStyle).toContain('--sidebar-font-size: 13px')
     expect(initialStyle).toContain('--editor-font-size: 17px')
     expect(initialStyle).toContain('--outline-font-size: 13px')
+    expect(initialStyle).toContain('--editor-content-width: 900px')
 
     await wrapper.get('[data-test="utility-settings"]').trigger('click')
 
@@ -652,12 +653,15 @@ describe('App shell', () => {
     await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
     await wrapper.get('[data-test="font-size-editor"] input').setValue(19)
     await wrapper.get('[data-test="font-size-outline"] input').setValue(14)
+    await wrapper.get('[data-test="editor-width"] input').setValue(1100)
 
     const stagedStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
     expect(stagedStyle).toContain('--sidebar-font-size: 13px')
     expect(stagedStyle).toContain('--editor-font-size: 17px')
     expect(stagedStyle).toContain('--outline-font-size: 13px')
+    expect(stagedStyle).toContain('--editor-content-width: 900px')
     expect(window.localStorage.getItem('donote.layoutFontSizes')).toBeNull()
+    expect(window.localStorage.getItem('donote.editorWidth')).toBeNull()
 
     await wrapper.get('[data-test="settings-save"]').trigger('click')
 
@@ -665,9 +669,11 @@ describe('App shell', () => {
     expect(layoutStyle).toContain('--sidebar-font-size: 12px')
     expect(layoutStyle).toContain('--editor-font-size: 19px')
     expect(layoutStyle).toContain('--outline-font-size: 14px')
+    expect(layoutStyle).toContain('--editor-content-width: 1100px')
     expect(window.localStorage.getItem('donote.layoutFontSizes')).toBe(
       '{"sidebar":12,"editor":19,"outline":14}',
     )
+    expect(window.localStorage.getItem('donote.editorWidth')).toBe('1100')
     expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
   })
 

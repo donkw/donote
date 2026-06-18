@@ -18,6 +18,11 @@ import UtilityDrawer from './components/UtilityDrawer.vue'
 import UtilityRail from './components/UtilityRail.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
+  getInitialEditorWidth,
+  normalizeEditorWidth,
+  saveEditorWidth,
+} from './lib/editorWidth'
+import {
   getInitialLayoutFontSizes,
   normalizeLayoutFontSizes,
   saveLayoutFontSizes,
@@ -46,6 +51,8 @@ const theme = ref<ThemeMode>(getInitialTheme())
 const loadingDocument = ref(false)
 const layoutFontSizes = ref(getInitialLayoutFontSizes())
 const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
+const editorWidth = ref(getInitialEditorWidth())
+const draftEditorWidth = ref(editorWidth.value)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 const menuEventCleanups: Array<() => void> = []
 
@@ -91,6 +98,7 @@ const layoutFontStyle = computed(() => ({
   '--sidebar-font-size': `${layoutFontSizes.value.sidebar}px`,
   '--editor-font-size': `${layoutFontSizes.value.editor}px`,
   '--outline-font-size': `${layoutFontSizes.value.outline}px`,
+  '--editor-content-width': `${editorWidth.value}px`,
 }))
 
 watch(searchQuery, () => {
@@ -270,6 +278,7 @@ function switchTheme() {
 function prepareUtilityPanel(panel: UtilityPanel) {
   if (panel === 'settings') {
     draftLayoutFontSizes.value = { ...layoutFontSizes.value }
+    draftEditorWidth.value = editorWidth.value
   }
 }
 
@@ -293,6 +302,7 @@ function toggleUtilityPanel(panel: UtilityPanel) {
 
 function closeSettings() {
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
+  draftEditorWidth.value = editorWidth.value
   showUtilityDrawer.value = false
 }
 
@@ -303,9 +313,15 @@ function setDraftLayoutFontSize(area: LayoutFontSizeArea, value: number) {
   })
 }
 
+function setDraftEditorWidth(value: number) {
+  draftEditorWidth.value = normalizeEditorWidth(value)
+}
+
 function saveSettings() {
   layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
+  editorWidth.value = saveEditorWidth(draftEditorWidth.value)
+  draftEditorWidth.value = editorWidth.value
   showUtilityDrawer.value = false
 }
 
@@ -459,9 +475,11 @@ function setError(error: unknown) {
         :search-result="searchResult"
         :active-search-index="activeSearchIndex"
         :draft-layout-font-sizes="draftLayoutFontSizes"
+        :draft-editor-width="draftEditorWidth"
         @previous-match="goToPreviousMatch"
         @next-match="goToNextMatch"
         @update-font-size="setDraftLayoutFontSize"
+        @update-editor-width="setDraftEditorWidth"
         @cancel-settings="closeSettings"
         @save-settings="saveSettings"
       />

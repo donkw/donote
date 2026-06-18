@@ -17,6 +17,7 @@ const props = defineProps<{
   searchResult: SearchResult
   activeSearchIndex: number
   draftLayoutFontSizes: LayoutFontSizes
+  draftEditorWidth: number
 }>()
 
 const emit = defineEmits<{
@@ -25,6 +26,7 @@ const emit = defineEmits<{
   (event: 'previous-match'): void
   (event: 'next-match'): void
   (event: 'update-font-size', area: LayoutFontSizeArea, value: number): void
+  (event: 'update-editor-width', value: number): void
   (event: 'cancel-settings'): void
   (event: 'save-settings'): void
 }>()
@@ -37,6 +39,10 @@ const titles: Record<UtilityPanel, string> = {
 
 function emitFontSize(area: LayoutFontSizeArea, value: number) {
   emit('update-font-size', area, value)
+}
+
+function emitEditorWidth(value: number) {
+  emit('update-editor-width', value)
 }
 </script>
 
@@ -68,7 +74,9 @@ function emitFontSize(area: LayoutFontSizeArea, value: number) {
     <SettingsPanel
       v-else
       :model-value="draftLayoutFontSizes"
+      :editor-width="draftEditorWidth"
       @update-font-size="emitFontSize"
+      @update-editor-width="emitEditorWidth"
       @cancel="$emit('cancel-settings')"
       @save="$emit('save-settings')"
     />

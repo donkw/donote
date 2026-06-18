@@ -634,7 +634,7 @@ textarea:focus-visible {
 }
 
 .milkdown-editor {
-  width: min(900px, 100%);
+  width: min(var(--editor-content-width, 900px), 100%);
   min-height: calc(100vh - var(--header-height) - 142px);
   margin: 0 auto;
   padding: 38px 54px 58px;

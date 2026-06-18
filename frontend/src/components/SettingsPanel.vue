@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ElButton, ElForm, ElFormItem, ElSlider } from 'element-plus'
+import { editorWidthControl } from '../lib/editorWidth'
 import {
   layoutFontSizeControls,
   type LayoutFontSizeArea,
@@ -8,10 +9,12 @@ import {
 
 defineProps<{
   modelValue: LayoutFontSizes
+  editorWidth: number
 }>()
 
 defineEmits<{
   (event: 'update-font-size', area: LayoutFontSizeArea, value: number): void
+  (event: 'update-editor-width', value: number): void
   (event: 'cancel'): void
   (event: 'save'): void
 }>()
@@ -20,6 +23,21 @@ defineEmits<{
 <template>
   <div class="utility-panel settings-panel">
     <h2>设置</h2>
+    <p class="panel-subtitle">编辑器布局</p>
+    <ElForm label-position="top">
+      <ElFormItem :label="editorWidthControl.label">
+        <ElSlider
+          data-test="editor-width"
+          :model-value="editorWidth"
+          :min="editorWidthControl.min"
+          :max="editorWidthControl.max"
+          :step="editorWidthControl.step"
+          show-input
+          @update:model-value="$emit('update-editor-width', Number($event))"
+        />
+      </ElFormItem>
+    </ElForm>
+
     <p class="panel-subtitle">布局字体大小</p>
     <ElForm label-position="top">
       <ElFormItem v-for="control in layoutFontSizeControls" :key="control.key" :label="control.label">
