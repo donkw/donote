@@ -9,6 +9,7 @@ import {
   OpenWorkspace,
   ReadMarkdown,
   RenamePath,
+  ResolveImageSource,
   SaveAttachment,
   SaveMarkdown,
   SelectAttachmentDirectory,
@@ -430,6 +431,10 @@ function insertMarkdown(markdown: string) {
   if (!activeDocument.value) return
   const spacer = editorContent.value && !editorContent.value.endsWith('\n') ? '\n\n' : ''
   editorContent.value = `${editorContent.value}${spacer}${markdown}`
+}
+
+async function resolveEditorImageSource(source: string, documentPath: string) {
+  return ResolveImageSource(documentPath, source)
 }
 
 function handleKeydown(event: KeyboardEvent) {
@@ -884,6 +889,7 @@ function setError(error: unknown) {
         <EditorSurface
           v-model="editorContent"
           :document="activeDocument"
+          :resolve-image-source="resolveEditorImageSource"
           @paste-files="handlePasteFiles"
         />
       </main>

@@ -139,6 +139,14 @@ func (a *App) SaveAttachment(directoryRelativePath string, originalName string, 
 	return service.SaveAttachment(directoryRelativePath, originalName, mimeType, dataBase64)
 }
 
+func (a *App) ResolveImageSource(documentRelativePath string, imageSource string) (string, error) {
+	service, err := a.requireWorkspace()
+	if err != nil {
+		return "", err
+	}
+	return service.ResolveImageSource(documentRelativePath, imageSource)
+}
+
 func (a *App) SelectAttachmentDirectory(kind string) (string, error) {
 	service, err := a.requireWorkspace()
 	if err != nil {

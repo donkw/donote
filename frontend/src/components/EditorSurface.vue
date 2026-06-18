@@ -3,9 +3,12 @@ import { ElEmpty } from 'element-plus'
 import type { OpenDocument } from '../types/app'
 import MilkdownEditor from './MilkdownEditor.vue'
 
+type ResolveImageSource = (source: string, activePath: string) => Promise<string>
+
 defineProps<{
   document: OpenDocument | null
   modelValue: string
+  resolveImageSource?: ResolveImageSource
 }>()
 
 defineEmits<{
@@ -20,6 +23,7 @@ defineEmits<{
       <MilkdownEditor
         :model-value="modelValue"
         :active-path="document.path"
+        :resolve-image-source="resolveImageSource"
         @update:model-value="$emit('update:modelValue', $event)"
         @paste-files="$emit('paste-files', $event)"
       />

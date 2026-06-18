@@ -12,6 +12,7 @@ import {
   OpenWorkspace,
   ReadMarkdown,
   RenamePath,
+  ResolveImageSource,
   SaveAttachment,
   SaveMarkdown,
   SelectAttachmentDirectory,
@@ -46,6 +47,7 @@ vi.mock('../wailsjs/go/main/App', () => ({
   CreateFolder: vi.fn(),
   RenamePath: vi.fn(),
   DeletePath: vi.fn(),
+  ResolveImageSource: vi.fn(),
   SaveAttachment: vi.fn(),
   SelectAttachmentDirectory: vi.fn(),
 }))
@@ -77,6 +79,7 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
     props: {
       modelValue: { type: String, required: true },
       activePath: { type: String, default: '' },
+      resolveImageSource: { type: Function, default: undefined },
     },
     emits: ['update:modelValue', 'paste-files'],
     setup(props, { emit }) {
@@ -130,6 +133,21 @@ function dispatchPasteFiles(target: EventTarget, files: File[]) {
     },
   })
   target.dispatchEvent(event)
+}
+
+async function waitForAssertion(assertion: () => void) {
+  let lastError: unknown
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      assertion()
+      return
+    } catch (error) {
+      lastError = error
+      await new Promise((resolve) => window.setTimeout(resolve, 10))
+      await flushPromises()
+    }
+  }
+  throw lastError
 }
 
 describe('App shell', () => {
@@ -1080,6 +1098,7 @@ describe('App shell', () => {
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     await flushPromises()
 
+    await waitForAssertion(() => expect(SaveAttachment).toHaveBeenCalledTimes(2))
     expect(SaveAttachment).toHaveBeenCalledWith(
       'assets/images',
       'photo.png',
@@ -1096,6 +1115,43 @@ describe('App shell', () => {
       '# Intro\n\n![photo.png](assets/images/photo.png)\n[spec.pdf](assets/files/spec.pdf)',
     )
     expect(ListWorkspace).toHaveBeenCalled()
+  })
+
+  test('passes workspace image resolver to the editor', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '![photo](assets/images/photo.png)',
+    })
+    vi.mocked(ResolveImageSource).mockResolvedValue('data:image/png;base64,aW1hZ2U=')
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    const editor = wrapper.getComponent({ name: 'MilkdownEditor' })
+    const resolver = editor.props('resolveImageSource') as (
+      source: string,
+      activePath: string,
+    ) => Promise<string>
+
+    await expect(resolver('assets/images/photo.png', 'intro.md')).resolves.toBe(
+      'data:image/png;base64,aW1hZ2U=',
+    )
+    expect(ResolveImageSource).toHaveBeenCalledWith('intro.md', 'assets/images/photo.png')
   })
 
   test('applies layout settings only after saving the settings dialog', async () => {

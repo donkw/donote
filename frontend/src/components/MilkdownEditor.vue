@@ -2,7 +2,12 @@
   <MilkdownProvider>
     <div class="milkdown-shell" @paste.capture="handlePaste">
       <div class="milkdown-editor">
-        <MilkdownHost :active-path="activePath" :model-value="modelValue" @update:model-value="emitUpdate" />
+        <MilkdownHost
+          :active-path="activePath"
+          :model-value="modelValue"
+          :resolve-image-source="resolveImageSource"
+          @update:model-value="emitUpdate"
+        />
       </div>
     </div>
   </MilkdownProvider>
@@ -12,9 +17,12 @@
 import { MilkdownProvider } from '@milkdown/vue'
 import MilkdownHost from './MilkdownHost.vue'
 
+type ResolveImageSource = (source: string, activePath: string) => Promise<string>
+
 defineProps<{
   modelValue: string
   activePath: string
+  resolveImageSource?: ResolveImageSource
 }>()
 
 const emit = defineEmits<{

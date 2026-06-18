@@ -16,6 +16,8 @@ export function ReadMarkdown(arg1:string):Promise<main.Document>;
 
 export function RenamePath(arg1:string,arg2:string):Promise<main.FileNode>;
 
+export function ResolveImageSource(arg1:string,arg2:string):Promise<string>;
+
 export function SaveAttachment(arg1:string,arg2:string,arg3:string,arg4:string):Promise<main.Attachment>;
 
 export function SaveMarkdown(arg1:string,arg2:string):Promise<main.SaveResult>;

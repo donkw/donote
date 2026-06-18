@@ -30,6 +30,10 @@ export function RenamePath(arg1, arg2) {
   return window['go']['main']['App']['RenamePath'](arg1, arg2);
 }
 
+export function ResolveImageSource(arg1, arg2) {
+  return window['go']['main']['App']['ResolveImageSource'](arg1, arg2);
+}
+
 export function SaveAttachment(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveAttachment'](arg1, arg2, arg3, arg4);
 }

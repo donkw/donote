@@ -4,6 +4,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"mime"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -275,6 +278,26 @@ func (s *WorkspaceService) SaveAttachment(directoryRelativePath string, original
 	}, nil
 }
 
+func (s *WorkspaceService) ResolveImageSource(documentRelativePath string, imageSource string) (string, error) {
+	imagePath, _, err := s.resolveLinkedPath(documentRelativePath, imageSource)
+	if err != nil {
+		return "", err
+	}
+	content, err := os.ReadFile(imagePath)
+	if err != nil {
+		return "", fmt.Errorf("读取图片失败: %w", err)
+	}
+	contentType := imageContentType(imagePath, content)
+	if !strings.HasPrefix(contentType, "image/") {
+		return "", errors.New("只能读取图片文件")
+	}
+	return fmt.Sprintf(
+		"data:%s;base64,%s",
+		contentType,
+		base64.StdEncoding.EncodeToString(content),
+	), nil
+}
+
 func (s *WorkspaceService) RelativeDirectoryPath(directoryPath string) (string, error) {
 	trimmed := strings.TrimSpace(directoryPath)
 	if trimmed == "" {
@@ -369,6 +392,30 @@ func (s *WorkspaceService) resolvePath(relativePath string, allowRoot bool) (str
 	return fullPath, cleanRelative, nil
 }
 
+func (s *WorkspaceService) resolveLinkedPath(documentRelativePath string, linkTarget string) (string, string, error) {
+	cleanDocument, err := cleanRelativePath(documentRelativePath, false)
+	if err != nil {
+		return "", "", err
+	}
+	if !isMarkdown(cleanDocument) {
+		return "", "", errors.New("只能从 Markdown 文件解析图片路径")
+	}
+
+	decodedTarget, err := cleanLinkTarget(linkTarget)
+	if err != nil {
+		return "", "", err
+	}
+	documentDirectory := path.Dir(cleanDocument)
+	if documentDirectory == "." {
+		documentDirectory = ""
+	}
+	candidate := path.Clean(path.Join(documentDirectory, decodedTarget))
+	if candidate == "." || candidate == ".." || strings.HasPrefix(candidate, "../") {
+		return "", "", errors.New("图片路径超出工作区")
+	}
+	return s.resolvePath(candidate, false)
+}
+
 func cleanRelativePath(value string, allowRoot bool) (string, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -394,6 +441,36 @@ func cleanRelativePath(value string, allowRoot bool) (string, error) {
 		}
 	}
 	return clean, nil
+}
+
+func cleanLinkTarget(value string) (string, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return "", errors.New("图片路径不能为空")
+	}
+	if strings.HasPrefix(trimmed, "//") {
+		return "", errors.New("图片路径必须位于工作区内")
+	}
+	if parsed, err := url.Parse(trimmed); err == nil && parsed.Scheme != "" {
+		return "", errors.New("图片路径必须位于工作区内")
+	}
+
+	withoutSuffix := trimmed
+	if index := strings.IndexAny(withoutSuffix, "?#"); index >= 0 {
+		withoutSuffix = withoutSuffix[:index]
+	}
+	decoded, err := url.PathUnescape(withoutSuffix)
+	if err != nil {
+		return "", fmt.Errorf("图片路径编码无效: %w", err)
+	}
+	normalized := strings.ReplaceAll(decoded, "\\", "/")
+	if filepath.IsAbs(decoded) || filepath.VolumeName(decoded) != "" || path.IsAbs(normalized) {
+		return "", errors.New("图片路径必须位于工作区内")
+	}
+	if normalized == "." || normalized == ".." || strings.TrimSpace(normalized) == "" {
+		return "", errors.New("图片路径不能为空")
+	}
+	return normalized, nil
 }
 
 func normalizeMarkdownName(name string) (string, error) {
@@ -490,6 +567,21 @@ func extensionForMimeType(mimeType string) string {
 	default:
 		return ".bin"
 	}
+}
+
+func imageContentType(filePath string, content []byte) string {
+	contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(filePath)))
+	if semicolon := strings.Index(contentType, ";"); semicolon >= 0 {
+		contentType = contentType[:semicolon]
+	}
+	if strings.HasPrefix(contentType, "image/") {
+		return contentType
+	}
+	detected := http.DetectContentType(content)
+	if semicolon := strings.Index(detected, ";"); semicolon >= 0 {
+		detected = detected[:semicolon]
+	}
+	return detected
 }
 
 func isMarkdown(value string) bool {

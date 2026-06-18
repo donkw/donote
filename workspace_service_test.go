@@ -169,6 +169,42 @@ func TestWorkspaceServiceSaveAttachment(t *testing.T) {
 	}
 }
 
+func TestWorkspaceServiceResolveImageSource(t *testing.T) {
+	root := t.TempDir()
+	mustMkdir(t, filepath.Join(root, "notes"))
+	mustMkdir(t, filepath.Join(root, "assets", "images"))
+	mustWriteFile(t, filepath.Join(root, "notes", "intro.md"), "# Intro")
+	imageBytes := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	imagePath := filepath.Join(root, "assets", "images", "photo one.png")
+	if err := os.WriteFile(imagePath, imageBytes, 0o644); err != nil {
+		t.Fatalf("write image: %v", err)
+	}
+	service, err := NewWorkspaceService(root)
+	if err != nil {
+		t.Fatalf("NewWorkspaceService() error = %v", err)
+	}
+
+	source, err := service.ResolveImageSource("notes/intro.md", "../assets/images/photo%20one.png")
+	if err != nil {
+		t.Fatalf("ResolveImageSource() error = %v", err)
+	}
+	expected := "data:image/png;base64," + base64.StdEncoding.EncodeToString(imageBytes)
+	if source != expected {
+		t.Fatalf("unexpected image source: %q", source)
+	}
+
+	if _, err := service.ResolveImageSource("notes/intro.md", "../../outside.png"); err == nil {
+		t.Fatal("ResolveImageSource(outside workspace) expected error")
+	}
+	if _, err := service.ResolveImageSource("notes/intro.md", "https://example.com/photo.png"); err == nil {
+		t.Fatal("ResolveImageSource(external) expected error")
+	}
+	mustWriteFile(t, filepath.Join(root, "assets", "images", "note.txt"), "not image")
+	if _, err := service.ResolveImageSource("notes/intro.md", "../assets/images/note.txt"); err == nil {
+		t.Fatal("ResolveImageSource(non-image) expected error")
+	}
+}
+
 func TestWorkspaceServiceRelativeDirectoryPath(t *testing.T) {
 	root := t.TempDir()
 	mustMkdir(t, filepath.Join(root, "assets", "images"))
