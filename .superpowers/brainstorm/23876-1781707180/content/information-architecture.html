@@ -1,0 +1,337 @@
+<style>
+  .ia-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .ia-card {
+    display: grid;
+    grid-template-rows: 255px auto;
+    overflow: hidden;
+    border: 1px solid #d8e0ea;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .ia-card:hover {
+    transform: translateY(-2px);
+    border-color: #7aa7f7;
+    box-shadow: 0 16px 34px rgba(24, 38, 62, 0.12);
+  }
+
+  .ia-card.selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 16px 34px rgba(24, 38, 62, 0.14);
+  }
+
+  .ia-preview {
+    display: grid;
+    grid-template-rows: 38px 1fr;
+    gap: 8px;
+    height: 255px;
+    padding: 10px;
+    background: #f4f6f8;
+  }
+
+  .ia-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border: 1px solid #dde5ee;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .brand-mini {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: #14b8a6;
+  }
+
+  .btn-mini {
+    width: 28px;
+    height: 22px;
+    border-radius: 6px;
+    background: #e7edf4;
+  }
+
+  .btn-mini.wide {
+    width: 70px;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .ia-body {
+    display: grid;
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .ia-a .ia-body {
+    grid-template-columns: 102px 1fr 96px;
+  }
+
+  .ia-b .ia-body {
+    grid-template-columns: 102px 1fr 44px;
+  }
+
+  .ia-c .ia-body {
+    grid-template-columns: 48px 112px 1fr;
+  }
+
+  .pane,
+  .editor,
+  .utility,
+  .rail {
+    border: 1px solid #dde5ee;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .pane,
+  .utility {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .editor {
+    display: grid;
+    grid-template-rows: 28px 1fr;
+    gap: 8px;
+    padding: 9px;
+    background: #fbfcfe;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 5px;
+  }
+
+  .tab {
+    width: 44px;
+    height: 22px;
+    border-radius: 6px;
+    background: #dff7f3;
+  }
+
+  .page {
+    display: grid;
+    align-content: start;
+    gap: 9px;
+    padding: 18px;
+    border: 1px solid #e1e7ee;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .line {
+    height: 8px;
+    border-radius: 999px;
+    background: #d3dde8;
+  }
+
+  .line.title {
+    width: 58%;
+    height: 15px;
+    background: #24303f;
+  }
+
+  .line.short {
+    width: 55%;
+  }
+
+  .line.active {
+    background: #14b8a6;
+  }
+
+  .rail {
+    display: grid;
+    align-content: start;
+    justify-items: center;
+    gap: 9px;
+    padding: 9px 0;
+  }
+
+  .rail-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: #e7edf4;
+  }
+
+  .rail-dot.active {
+    background: #14b8a6;
+  }
+
+  .drawer {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #bdebe4;
+    border-radius: 8px;
+    background: #effdfb;
+  }
+
+  .drawer-label {
+    height: 18px;
+    border-radius: 6px;
+    background: #14b8a6;
+  }
+
+  .copy {
+    padding: 16px 16px 18px;
+  }
+
+  .copy h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+  }
+
+  .copy p {
+    margin: 0;
+    color: #5f6f82;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 980px) {
+    .ia-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div>
+  <h2>Information architecture for the redesign</h2>
+  <p class="subtitle">Choose how Donote should organize file navigation, writing, outline, search, and settings after the full Element Plus migration.</p>
+</div>
+
+<div class="ia-grid">
+  <div class="ia-card card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="ia-preview ia-a">
+      <div class="ia-top">
+        <div class="brand-mini"></div>
+        <div class="btn-mini wide"></div>
+        <div class="btn-mini"></div>
+        <div class="spacer"></div>
+        <div class="btn-mini"></div>
+        <div class="btn-mini"></div>
+      </div>
+      <div class="ia-body">
+        <div class="pane">
+          <div class="line title"></div>
+          <div class="line active"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+          <div class="line"></div>
+        </div>
+        <div class="editor">
+          <div class="tabs"><div class="tab"></div><div class="tab"></div></div>
+          <div class="page">
+            <div class="line title"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line short"></div>
+          </div>
+        </div>
+        <div class="utility">
+          <div class="line title"></div>
+          <div class="line active"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <h3>A. Persistent three-pane workspace</h3>
+      <p>Files, editor, and outline stay visible. Search and settings use Element Plus dialogs. Most familiar and stable, least transformative.</p>
+    </div>
+  </div>
+
+  <div class="ia-card card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="ia-preview ia-b">
+      <div class="ia-top">
+        <div class="brand-mini"></div>
+        <div class="btn-mini wide"></div>
+        <div class="btn-mini"></div>
+        <div class="spacer"></div>
+        <div class="btn-mini"></div>
+        <div class="btn-mini"></div>
+      </div>
+      <div class="ia-body">
+        <div class="pane">
+          <div class="line title"></div>
+          <div class="line active"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+          <div class="line"></div>
+        </div>
+        <div class="editor">
+          <div class="tabs"><div class="tab"></div><div class="tab"></div><div class="tab"></div></div>
+          <div class="page">
+            <div class="line title"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line short"></div>
+          </div>
+        </div>
+        <div class="rail">
+          <div class="rail-dot active"></div>
+          <div class="rail-dot"></div>
+          <div class="rail-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <h3>B. Right utility rail</h3>
+      <p>Files remain on the left. Outline, search, and settings become right-side utility tools opened through icons and drawers. Cleaner editor by default.</p>
+    </div>
+  </div>
+
+  <div class="ia-card card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="ia-preview ia-c">
+      <div class="ia-top">
+        <div class="brand-mini"></div>
+        <div class="btn-mini wide"></div>
+        <div class="spacer"></div>
+        <div class="btn-mini"></div>
+      </div>
+      <div class="ia-body">
+        <div class="rail">
+          <div class="rail-dot active"></div>
+          <div class="rail-dot"></div>
+          <div class="rail-dot"></div>
+        </div>
+        <div class="drawer">
+          <div class="drawer-label"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+        </div>
+        <div class="editor">
+          <div class="tabs"><div class="tab"></div><div class="tab"></div></div>
+          <div class="page">
+            <div class="line title"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line short"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <h3>C. Command rail and contextual drawer</h3>
+      <p>A left rail controls workspace, search, outline, and settings drawers. More app-like and compact, but file navigation is one step less direct.</p>
+    </div>
+  </div>
+</div>
