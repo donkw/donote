@@ -455,6 +455,19 @@ textarea:focus-visible {
   opacity: min(var(--tree-depth, 0), 1);
 }
 
+.file-tree-node.workspace-root {
+  min-height: 34px;
+  margin-bottom: 4px;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 760;
+}
+
+.file-tree-node.workspace-root::before {
+  display: none;
+}
+
 .file-tree-node svg,
 .file-tree-node__name {
   position: relative;

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, FileText, Folder, Search } from '@lucide/vue'
+import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Search } from '@lucide/vue'
 import { ElEmpty, ElInput, ElScrollbar, ElTree } from 'element-plus'
-import { ref, watch } from 'vue'
-import type { main } from '../../wailsjs/go/models'
+import { computed, ref, watch } from 'vue'
+import { main } from '../../wailsjs/go/models'
 
-defineProps<{
+const workspaceRootPath = '__donote_workspace_root__'
+
+const props = defineProps<{
   workspaceName: string
   tree: main.FileNode[]
   activeFilePath: string
@@ -25,10 +27,39 @@ const treeProps = {
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const fileTreeQuery = ref('')
+const workspaceRootCollapsed = ref(false)
+
+const displayTree = computed<main.FileNode[]>(() => {
+  if (!props.workspaceName) {
+    return []
+  }
+  return [
+    main.FileNode.createFrom({
+      name: props.workspaceName,
+      path: workspaceRootPath,
+      type: 'folder',
+      children: props.tree,
+    }),
+  ]
+})
+
+const expandedTreeKeys = computed(() => {
+  if (!props.workspaceName || workspaceRootCollapsed.value) {
+    return props.expandedFolderPaths
+  }
+  return [workspaceRootPath, ...props.expandedFolderPaths]
+})
 
 watch(fileTreeQuery, (query) => {
   treeRef.value?.filter(query)
 })
+
+watch(
+  () => props.workspaceName,
+  () => {
+    workspaceRootCollapsed.value = false
+  },
+)
 
 function handleNodeClick(node: main.FileNode) {
   if (node.type === 'file') {
@@ -43,23 +74,19 @@ function handleNodeClick(node: main.FileNode) {
 
   if (treeNode.expanded) {
     treeNode.collapse()
-    emit('folder-collapsed', node.path)
+    handleFolderExpansionChange(node, false)
   } else {
     treeNode.expand()
-    emit('folder-expanded', node.path)
+    handleFolderExpansionChange(node, true)
   }
 }
 
 function handleNodeExpand(node: main.FileNode) {
-  if (node.type === 'folder') {
-    emit('folder-expanded', node.path)
-  }
+  handleFolderExpansionChange(node, true)
 }
 
 function handleNodeCollapse(node: main.FileNode) {
-  if (node.type === 'folder') {
-    emit('folder-collapsed', node.path)
-  }
+  handleFolderExpansionChange(node, false)
 }
 
 function filterTreeNode(query: string, node: main.FileNode) {
@@ -76,17 +103,33 @@ function filterTreeNode(query: string, node: main.FileNode) {
 function treeNodeStyle(level: number) {
   return { '--tree-depth': Math.max(level - 1, 0) }
 }
+
+function treeNodeTestId(node: main.FileNode) {
+  if (node.path === workspaceRootPath) {
+    return 'workspace-root'
+  }
+  return node.type === 'file' ? `file-${node.path}` : `folder-${node.path}`
+}
+
+function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
+  if (node.type !== 'folder') {
+    return
+  }
+  if (node.path === workspaceRootPath) {
+    workspaceRootCollapsed.value = !expanded
+    return
+  }
+  if (expanded) {
+    emit('folder-expanded', node.path)
+  } else {
+    emit('folder-collapsed', node.path)
+  }
+}
 </script>
 
 <template>
   <aside class="sidebar workspace-sidebar">
     <div class="sidebar-header">
-      <div v-if="workspaceName" class="workspace-title">
-        <Folder :size="16" />
-        <span>{{ workspaceName }}</span>
-      </div>
-      <ElEmpty v-else class="sidebar-empty" description="还没有打开笔记文件夹" :image-size="56" />
-
       <div v-if="workspaceName || tree.length" data-test="file-tree-search" class="file-tree-search">
         <ElInput
           v-model="fileTreeQuery"
@@ -99,17 +142,18 @@ function treeNodeStyle(level: number) {
           </template>
         </ElInput>
       </div>
+      <ElEmpty v-else class="sidebar-empty" description="还没有打开笔记文件夹" :image-size="56" />
     </div>
 
-    <ElScrollbar v-if="tree.length" class="file-tree-scroll">
+    <ElScrollbar v-if="displayTree.length" class="file-tree-scroll">
       <ElTree
         ref="treeRef"
         class="file-tree"
-        :data="tree"
+        :data="displayTree"
         node-key="path"
         :props="treeProps"
         :current-node-key="activeFilePath"
-        :default-expanded-keys="expandedFolderPaths"
+        :default-expanded-keys="expandedTreeKeys"
         :expand-on-click-node="false"
         :filter-node-method="filterTreeNode"
         highlight-current
@@ -119,14 +163,20 @@ function treeNodeStyle(level: number) {
         <template #default="{ node, data }">
           <button
             class="tree-row file-tree-node"
-            :class="{ folder: data.type === 'folder', active: data.path === activeFilePath }"
-            :data-test="data.type === 'file' ? `file-${data.path}` : `folder-${data.path}`"
+            :class="{
+              folder: data.type === 'folder',
+              'workspace-root': data.path === workspaceRootPath,
+              active: data.path === activeFilePath,
+            }"
+            :data-test="treeNodeTestId(data)"
             :style="treeNodeStyle(node.level)"
             type="button"
             @click.stop="handleNodeClick(data)"
           >
             <ChevronRight v-if="data.type === 'folder' && !node.expanded" :size="14" />
             <ChevronDown v-else-if="data.type === 'folder'" :size="14" />
+            <FolderOpen v-if="data.type === 'folder' && node.expanded" :size="14" />
+            <Folder v-else-if="data.type === 'folder'" :size="14" />
             <FileText v-else :size="14" />
             <span class="file-tree-node__name">{{ data.name }}</span>
           </button>

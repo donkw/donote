@@ -53,7 +53,9 @@ const menuEventCleanups: Array<() => void> = []
 
 const expandedFolderPaths = computed(() =>
   workspace.value
-    ? collectFolderPaths(workspace.value.tree).filter((path) => !collapsedFolderPaths.value.has(path))
+    ? collectFolderPaths(workspace.value.tree).filter(
+        (path) => !isCollapsedOrInsideCollapsedFolder(path, collapsedFolderPaths.value),
+      )
     : [],
 )
 const activeDocument = computed(() =>
@@ -429,6 +431,15 @@ function setFolderCollapsed(path: string, collapsed: boolean) {
   else next.delete(path)
   collapsedFolderPaths.value = next
   saveCollapsedFolderPaths(workspace.value.rootPath, [...next])
+}
+
+function isCollapsedOrInsideCollapsedFolder(path: string, collapsedPaths: Set<string>) {
+  for (const collapsedPath of collapsedPaths) {
+    if (path === collapsedPath || path.startsWith(`${collapsedPath}/`)) {
+      return true
+    }
+  }
+  return false
 }
 
 function setError(error: unknown) {

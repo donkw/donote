@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import App from './App.vue'
 import EditorSurface from './components/EditorSurface.vue'
+import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   CreateMarkdown,
   DeletePath,
@@ -471,9 +472,16 @@ describe('App shell', () => {
           type: 'folder',
           children: [
             {
-              name: 'plan.md',
-              path: 'projects/plan.md',
-              type: 'file',
+              name: 'archive',
+              path: 'projects/archive',
+              type: 'folder',
+              children: [
+                {
+                  name: 'plan.md',
+                  path: 'projects/archive/plan.md',
+                  type: 'file',
+                },
+              ],
             },
           ],
         } as any,
@@ -484,12 +492,17 @@ describe('App shell', () => {
     emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
-    expect(wrapper.find('[data-test="file-projects/plan.md"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(true)
+    expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([
+      'projects',
+      'projects/archive',
+    ])
 
     await wrapper.get('[data-test="folder-projects"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-test="file-projects/plan.md"]').isVisible()).toBe(false)
+    expect(wrapper.get('[data-test="file-projects/archive/plan.md"]').isVisible()).toBe(false)
+    expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([])
     expect(window.localStorage.getItem('donote.treeExpansion')).toBe(
       '{"D:/notes":["projects"]}',
     )
@@ -499,12 +512,17 @@ describe('App shell', () => {
     emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
-    expect(reopened.find('[data-test="file-projects/plan.md"]').exists()).toBe(false)
+    expect(reopened.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
+    expect(reopened.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([])
 
     await reopened.get('[data-test="folder-projects"]').trigger('click')
     await flushPromises()
 
-    expect(reopened.find('[data-test="file-projects/plan.md"]').exists()).toBe(true)
+    expect(reopened.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(true)
+    expect(reopened.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([
+      'projects',
+      'projects/archive',
+    ])
     expect(window.localStorage.getItem('donote.treeExpansion')).toBe('{"D:/notes":[]}')
   })
 
