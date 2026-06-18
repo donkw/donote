@@ -829,11 +829,9 @@ function setError(error: unknown) {
 <template>
   <div class="app-shell">
     <AppHeader
-      :show-sidebar="showSidebar"
       :theme="theme"
       :save-status-text="saveStatusText"
       :save-state="activeSaveState"
-      @toggle-sidebar="showSidebar = !showSidebar"
       @search="openUtilityPanel('search')"
       @settings="openUtilityPanel('settings')"
       @save="flushSave"

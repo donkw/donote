@@ -2,8 +2,6 @@
 import {
   FileText,
   Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
   Search,
   Settings,
   Sun,
@@ -13,14 +11,12 @@ import type { SaveState } from '../types/app'
 import type { ThemeMode } from '../lib/theme'
 
 defineProps<{
-  showSidebar: boolean
   theme: ThemeMode
   saveStatusText: string
   saveState: SaveState
 }>()
 
 defineEmits<{
-  (event: 'toggle-sidebar'): void
   (event: 'search'): void
   (event: 'settings'): void
   (event: 'save'): void
@@ -31,12 +27,6 @@ defineEmits<{
 <template>
   <header data-test="topbar" class="topbar app-chrome app-header">
     <div class="brand app-header__brand">
-      <ElTooltip :content="showSidebar ? '隐藏文件树' : '显示文件树'" placement="bottom">
-        <ElButton class="icon-button subtle" data-test="sidebar-toggle" circle text @click="$emit('toggle-sidebar')">
-          <PanelLeftClose v-if="showSidebar" :size="18" />
-          <PanelLeftOpen v-else :size="18" />
-        </ElButton>
-      </ElTooltip>
       <span data-test="brand-mark" class="brand-mark">D</span>
       <span class="brand-copy">
         <span class="brand-name">Donote</span>

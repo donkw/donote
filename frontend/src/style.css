@@ -166,7 +166,7 @@ textarea:focus-visible {
 .brand {
   display: flex;
   align-items: center;
-  flex: 0 0 252px;
+  flex: 0 0 160px;
   gap: 9px;
   min-width: 0;
 }
@@ -944,7 +944,7 @@ textarea:focus-visible {
 @media (max-width: 1100px) {
   .app-header__brand,
   .brand {
-    flex-basis: 220px;
+    flex-basis: 148px;
   }
 
   .milkdown-shell {
