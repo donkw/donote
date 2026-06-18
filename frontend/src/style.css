@@ -621,6 +621,7 @@ textarea:focus-visible {
   column-gap: 12px;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 38px 38px 48px;
 }
 
