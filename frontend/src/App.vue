@@ -76,6 +76,7 @@ const editorWidth = ref(getInitialEditorWidth())
 const draftEditorWidth = ref(editorWidth.value)
 const attachmentDirectories = ref(getInitialAttachmentDirectories())
 const draftAttachmentDirectories = ref<AttachmentDirectories>({ ...attachmentDirectories.value })
+const draftWorkspaceRoot = ref(workspace.value?.rootPath ?? '')
 const sidebarWidth = ref(getInitialSidebarWidth())
 const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
@@ -85,6 +86,7 @@ const searchPanel = ref<{ focus: () => void } | null>(null)
 
 let sidebarResizeStartX = 0
 let sidebarResizeStartWidth = sidebarWidth.value
+let workspaceSelectionPromise: Promise<main.WorkspaceInfo | null> | null = null
 
 const expandedFolderPaths = computed(() =>
   workspace.value
@@ -140,7 +142,7 @@ onMounted(() => {
       void createNote()
     }),
   )
-  void restoreLastWorkspace()
+  void initializeWorkspace()
 })
 
 onBeforeUnmount(() => {
@@ -151,28 +153,53 @@ onBeforeUnmount(() => {
   }
 })
 
-async function openWorkspace() {
+async function initializeWorkspace() {
+  const restored = await restoreLastWorkspace()
+  if (!restored && !workspace.value) {
+    await openWorkspace()
+  }
+}
+
+function openWorkspace(): Promise<main.WorkspaceInfo | null> {
+  if (!workspaceSelectionPromise) {
+    workspaceSelectionPromise = runOpenWorkspace().finally(() => {
+      workspaceSelectionPromise = null
+    })
+  }
+  return workspaceSelectionPromise
+}
+
+async function runOpenWorkspace(): Promise<main.WorkspaceInfo | null> {
   errorMessage.value = ''
   loading.value = true
   try {
-    const selected = await SelectWorkspace()
-    if (!selected.rootPath) {
-      return
-    }
-    applyWorkspaceInfo(selected)
-    persistOpenDocumentSession()
-    window.localStorage.setItem(lastWorkspaceStorageKey, selected.rootPath)
+    return await selectAndApplyWorkspace()
   } catch (error) {
     setError(error)
+    return null
   } finally {
     loading.value = false
   }
 }
 
-async function restoreLastWorkspace() {
+async function selectAndApplyWorkspace(): Promise<main.WorkspaceInfo | null> {
+  const selected = await SelectWorkspace()
+  if (!selected?.rootPath) {
+    return null
+  }
+  applyWorkspaceInfo(selected)
+  persistOpenDocumentSession()
+  window.localStorage.setItem(lastWorkspaceStorageKey, selected.rootPath)
+  return selected
+}
+
+async function restoreLastWorkspace(): Promise<boolean> {
   const lastWorkspaceRoot = window.localStorage.getItem(lastWorkspaceStorageKey)
-  if (!lastWorkspaceRoot || workspace.value) {
-    return
+  if (workspace.value) {
+    return true
+  }
+  if (!lastWorkspaceRoot) {
+    return false
   }
 
   loading.value = true
@@ -180,8 +207,10 @@ async function restoreLastWorkspace() {
     const restored = await OpenWorkspace(lastWorkspaceRoot)
     applyWorkspaceInfo(restored)
     await restoreOpenDocumentsForWorkspace(restored.rootPath)
+    return true
   } catch {
     window.localStorage.removeItem(lastWorkspaceStorageKey)
+    return false
   } finally {
     loading.value = false
   }
@@ -190,6 +219,7 @@ async function restoreLastWorkspace() {
 function applyWorkspaceInfo(info: main.WorkspaceInfo) {
   collapsedFolderPaths.value = new Set(getCollapsedFolderPaths(info.rootPath))
   workspace.value = info
+  draftWorkspaceRoot.value = info.rootPath
   openDocuments.value = []
   activeDocumentPath.value = ''
   searchQuery.value = ''
@@ -507,6 +537,7 @@ function removeSidebarResizeListeners() {
 
 function prepareUtilityPanel(panel: UtilityPanel) {
   if (panel === 'settings') {
+    draftWorkspaceRoot.value = workspace.value?.rootPath ?? ''
     draftLayoutFontSizes.value = { ...layoutFontSizes.value }
     draftEditorWidth.value = editorWidth.value
     draftAttachmentDirectories.value = { ...attachmentDirectories.value }
@@ -532,6 +563,7 @@ function toggleUtilityPanel(panel: UtilityPanel) {
 }
 
 function closeSettings() {
+  draftWorkspaceRoot.value = workspace.value?.rootPath ?? ''
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   draftEditorWidth.value = editorWidth.value
   draftAttachmentDirectories.value = { ...attachmentDirectories.value }
@@ -568,7 +600,35 @@ async function selectDraftAttachmentDirectory(key: keyof AttachmentDirectories) 
   }
 }
 
+async function selectWorkspaceFromSettings() {
+  if (!(await confirmWorkspaceSwitchIfDirty())) {
+    return
+  }
+  const selected = await openWorkspace()
+  if (selected) {
+    draftWorkspaceRoot.value = selected.rootPath
+  }
+}
+
+async function confirmWorkspaceSwitchIfDirty(): Promise<boolean> {
+  if (!hasDirtyDocuments()) {
+    return true
+  }
+
+  try {
+    await ElMessageBox.confirm('当前工作区有未保存更改，切换后将丢失。', '切换工作目录', {
+      confirmButtonText: '切换',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 function saveSettings() {
+  draftWorkspaceRoot.value = workspace.value?.rootPath ?? ''
   layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   editorWidth.value = saveEditorWidth(draftEditorWidth.value)
@@ -629,6 +689,10 @@ async function closeDocument(document: OpenDocument) {
 
 function isDocumentDirty(document: OpenDocument): boolean {
   return normalizeMarkdownForDirtyCheck(document.content) !== normalizeMarkdownForDirtyCheck(document.savedContent)
+}
+
+function hasDirtyDocuments(): boolean {
+  return openDocuments.value.some(isDocumentDirty)
 }
 
 function normalizeMarkdownForDirtyCheck(content: string): string {
@@ -928,6 +992,7 @@ function setError(error: unknown) {
         :active-panel="activeUtilityPanel"
         :outline="outline"
         :outline-font-size="layoutFontSizes.outline"
+        :workspace-root="draftWorkspaceRoot"
         :draft-layout-font-sizes="draftLayoutFontSizes"
         :draft-editor-width="draftEditorWidth"
         :draft-attachment-directories="draftAttachmentDirectories"
@@ -935,6 +1000,7 @@ function setError(error: unknown) {
         @update-editor-width="setDraftEditorWidth"
         @update-attachment-directory="setDraftAttachmentDirectory"
         @select-attachment-directory="selectDraftAttachmentDirectory"
+        @select-workspace="selectWorkspaceFromSettings"
         @cancel-settings="closeSettings"
         @save-settings="saveSettings"
       />

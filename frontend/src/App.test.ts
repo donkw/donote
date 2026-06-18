@@ -166,6 +166,12 @@ describe('App shell', () => {
     window.localStorage.clear()
     elementPlusMocks.confirm.mockResolvedValue('confirm')
     elementPlusMocks.prompt.mockResolvedValue({ value: '未命名.md' })
+    vi.mocked(SelectWorkspace).mockReset()
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: '',
+      name: '',
+      tree: [],
+    } as any)
   })
 
   test('starts with a Chinese empty workspace state', () => {
@@ -173,6 +179,28 @@ describe('App shell', () => {
 
     expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
+  })
+
+  test('prompts for a workspace on first startup', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(SelectWorkspace).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('notes')
+    expect(wrapper.text()).toContain('intro.md')
+    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('D:/notes')
   })
 
   test('renders the editor workspace without a top header', () => {
@@ -206,6 +234,7 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(OpenWorkspace).toHaveBeenCalledWith('D:/notes')
+    expect(SelectWorkspace).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('notes')
     expect(wrapper.text()).toContain('intro.md')
   })
@@ -1212,6 +1241,135 @@ describe('App shell', () => {
       '{"images":"assets/images","files":"assets/files"}',
     )
     expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
+  })
+
+  test('shows and switches the current workspace from settings', async () => {
+    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
+    vi.mocked(OpenWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [],
+    } as any)
+    vi.mocked(SelectWorkspace).mockResolvedValueOnce({
+      rootPath: 'E:/writing',
+      name: 'writing',
+      tree: [
+        {
+          name: 'draft.md',
+          path: 'draft.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="utility-settings"]').trigger('click')
+    await flushPromises()
+
+    expect(
+      (wrapper.get('[data-test="settings-workspace-root"]').element as HTMLInputElement).value,
+    ).toBe('D:/notes')
+
+    await wrapper.get('[data-test="select-workspace-root"]').trigger('click')
+    await flushPromises()
+
+    expect(SelectWorkspace).toHaveBeenCalledTimes(1)
+    expect(
+      (wrapper.get('[data-test="settings-workspace-root"]').element as HTMLInputElement).value,
+    ).toBe('E:/writing')
+    expect(wrapper.text()).toContain('writing')
+    expect(wrapper.text()).toContain('draft.md')
+    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('E:/writing')
+  })
+
+  test('fills the workspace path from settings when no workspace is open', async () => {
+    vi.mocked(SelectWorkspace)
+      .mockResolvedValueOnce({
+        rootPath: '',
+        name: '',
+        tree: [],
+      } as any)
+      .mockResolvedValueOnce({
+        rootPath: 'E:/writing',
+        name: 'writing',
+        tree: [],
+      } as any)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="utility-settings"]').trigger('click')
+    await flushPromises()
+
+    expect(
+      (wrapper.get('[data-test="settings-workspace-root"]').element as HTMLInputElement).value,
+    ).toBe('')
+
+    await wrapper.get('[data-test="select-workspace-root"]').trigger('click')
+    await flushPromises()
+
+    expect(
+      (wrapper.get('[data-test="settings-workspace-root"]').element as HTMLInputElement).value,
+    ).toBe('E:/writing')
+    expect(wrapper.text()).toContain('writing')
+  })
+
+  test('confirms before switching workspace from settings when documents are dirty', async () => {
+    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
+    vi.mocked(OpenWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+    vi.mocked(SelectWorkspace).mockResolvedValueOnce({
+      rootPath: 'E:/writing',
+      name: 'writing',
+      tree: [],
+    } as any)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.mock-editor').setValue('# Draft')
+    await flushPromises()
+    await wrapper.get('[data-test="utility-settings"]').trigger('click')
+    await flushPromises()
+
+    elementPlusMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
+    await wrapper.get('[data-test="select-workspace-root"]').trigger('click')
+    await flushPromises()
+
+    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
+      '当前工作区有未保存更改，切换后将丢失。',
+      '切换工作目录',
+      expect.objectContaining({
+        confirmButtonText: '切换',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }),
+    )
+    expect(SelectWorkspace).not.toHaveBeenCalled()
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Draft')
+
+    elementPlusMocks.confirm.mockResolvedValueOnce('confirm')
+    await wrapper.get('[data-test="select-workspace-root"]').trigger('click')
+    await flushPromises()
+
+    expect(SelectWorkspace).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('writing')
+    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('E:/writing')
   })
 
   test('selects attachment directories through the native directory dialog', async () => {

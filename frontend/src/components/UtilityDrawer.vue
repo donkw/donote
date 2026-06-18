@@ -12,6 +12,7 @@ const props = defineProps<{
   activePanel: UtilityPanel
   outline: OutlineItem[]
   outlineFontSize: number
+  workspaceRoot: string
   draftLayoutFontSizes: LayoutFontSizes
   draftEditorWidth: number
   draftAttachmentDirectories: AttachmentDirectories
@@ -23,6 +24,7 @@ const emit = defineEmits<{
   (event: 'update-editor-width', value: number): void
   (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
   (event: 'select-attachment-directory', key: keyof AttachmentDirectories): void
+  (event: 'select-workspace'): void
   (event: 'cancel-settings'): void
   (event: 'save-settings'): void
 }>()
@@ -47,6 +49,10 @@ function emitAttachmentDirectory(key: keyof AttachmentDirectories, value: string
 function emitSelectAttachmentDirectory(key: keyof AttachmentDirectories) {
   emit('select-attachment-directory', key)
 }
+
+function emitSelectWorkspace() {
+  emit('select-workspace')
+}
 </script>
 
 <template>
@@ -68,12 +74,14 @@ function emitSelectAttachmentDirectory(key: keyof AttachmentDirectories) {
     <SettingsPanel
       v-else
       :model-value="draftLayoutFontSizes"
+      :workspace-root="workspaceRoot"
       :editor-width="draftEditorWidth"
       :attachment-directories="draftAttachmentDirectories"
       @update-font-size="emitFontSize"
       @update-editor-width="emitEditorWidth"
       @update-attachment-directory="emitAttachmentDirectory"
       @select-attachment-directory="emitSelectAttachmentDirectory"
+      @select-workspace="emitSelectWorkspace"
       @cancel="$emit('cancel-settings')"
       @save="$emit('save-settings')"
     />

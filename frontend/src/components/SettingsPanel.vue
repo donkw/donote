@@ -10,6 +10,7 @@ import {
 
 defineProps<{
   modelValue: LayoutFontSizes
+  workspaceRoot: string
   editorWidth: number
   attachmentDirectories: AttachmentDirectories
 }>()
@@ -19,6 +20,7 @@ defineEmits<{
   (event: 'update-editor-width', value: number): void
   (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
   (event: 'select-attachment-directory', key: keyof AttachmentDirectories): void
+  (event: 'select-workspace'): void
   (event: 'cancel'): void
   (event: 'save'): void
 }>()
@@ -27,6 +29,27 @@ defineEmits<{
 <template>
   <div class="utility-panel settings-panel">
     <h2>设置</h2>
+    <p class="panel-subtitle">工作目录</p>
+    <ElForm label-position="top">
+      <ElFormItem label="当前工作目录">
+        <ElInput
+          data-test="settings-workspace-root"
+          :model-value="workspaceRoot"
+          placeholder="未选择工作目录"
+          readonly
+        >
+          <template #append>
+            <ElButton
+              data-test="select-workspace-root"
+              @click="$emit('select-workspace')"
+            >
+              选择
+            </ElButton>
+          </template>
+        </ElInput>
+      </ElFormItem>
+    </ElForm>
+
     <p class="panel-subtitle">编辑器布局</p>
     <ElForm label-position="top">
       <ElFormItem :label="editorWidthControl.label">
