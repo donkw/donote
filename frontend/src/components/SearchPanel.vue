@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Search } from '@lucide/vue'
 import { ElButton, ElInput } from 'element-plus'
+import { ref } from 'vue'
 import type { SearchResult } from '../lib/search'
+
+const searchPanel = ref<HTMLElement | null>(null)
 
 defineProps<{
   query: string
@@ -14,11 +17,16 @@ defineEmits<{
   (event: 'previous'): void
   (event: 'next'): void
 }>()
+
+function focus() {
+  searchPanel.value?.querySelector('input')?.focus()
+}
+
+defineExpose({ focus })
 </script>
 
 <template>
-  <div class="utility-panel search-panel">
-    <h2>搜索</h2>
+  <div ref="searchPanel" class="search-panel">
     <ElInput
       :model-value="query"
       data-test="search-input"

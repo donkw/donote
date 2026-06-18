@@ -1,6 +1,5 @@
 import type { main } from '../../wailsjs/go/models'
 import type { OutlineItem } from '../lib/outline'
-import type { SearchResult } from '../lib/search'
 
 export interface VisibleNode {
   node: main.FileNode
@@ -18,13 +17,7 @@ export interface OpenDocument {
 
 export type SaveState = 'saved' | 'saving' | 'dirty' | 'error'
 
-export type UtilityPanel = 'outline' | 'search' | 'settings'
-
-export interface SearchPanelState {
-  query: string
-  result: SearchResult
-  activeIndex: number
-}
+export type UtilityPanel = 'outline' | 'settings'
 
 export interface OutlinePanelState {
   items: OutlineItem[]

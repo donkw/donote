@@ -1174,7 +1174,8 @@ describe('App shell', () => {
     await wrapper.get('[data-test="utility-settings"]').trigger('click')
 
     expect(wrapper.find('[data-test="settings-page"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(true)
+    expect(wrapper.find('.utility-drawer [data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('布局字体大小')
     await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
     await wrapper.get('[data-test="font-size-editor"] input').setValue(19)
@@ -1277,10 +1278,13 @@ describe('App shell', () => {
     )
   })
 
-  test('opens search in the utility drawer from Ctrl+F', async () => {
-    const wrapper = mount(App)
+  test('focuses the editor search bar from Ctrl+F', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const wrapper = mount(App, { attachTo: host })
 
-    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
+    const searchInput = wrapper.get('[data-test="search-input"]')
+    expect(searchInput.element).not.toBe(document.activeElement)
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
@@ -1291,10 +1295,12 @@ describe('App shell', () => {
     )
     await flushPromises()
 
-    wrapper.get('[data-test="search-input"]')
+    expect(searchInput.element).toBe(document.activeElement)
+    wrapper.unmount()
+    host.remove()
   })
 
-  test('searches the active document from the utility rail drawer', async () => {
+  test('searches the active document from the editor search bar', async () => {
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1318,9 +1324,7 @@ describe('App shell', () => {
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
 
-    await wrapper.get('[data-test="utility-search"]').trigger('click')
-    await flushPromises()
-
+    expect(wrapper.find('[data-test="utility-search"]').exists()).toBe(false)
     await wrapper.get('[data-test="search-input"]').setValue('Intro')
     await flushPromises()
 

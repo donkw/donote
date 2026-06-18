@@ -490,7 +490,7 @@ textarea:focus-visible {
 
 .editor-pane {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -810,9 +810,29 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
+.search-panel {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 32px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface), var(--app-bg) 34%);
+}
+
+.search-panel .el-input {
+  width: min(420px, 100%);
+  min-width: 220px;
+}
+
 .search-actions {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 8px;
 }
 

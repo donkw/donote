@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, ListTree, Moon, Search, Settings, Sun } from '@lucide/vue'
+import { FileText, ListTree, Moon, Settings, Sun } from '@lucide/vue'
 import { ElButton, ElTooltip } from 'element-plus'
 import type { ThemeMode } from '../lib/theme'
 import type { SaveState, UtilityPanel } from '../types/app'
@@ -19,7 +19,6 @@ defineEmits<{
 
 const tools: Array<{ key: UtilityPanel; label: string; icon: typeof ListTree }> = [
   { key: 'outline', label: '大纲', icon: ListTree },
-  { key: 'search', label: '搜索', icon: Search },
   { key: 'settings', label: '设置', icon: Settings },
 ]
 </script>

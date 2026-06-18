@@ -19,6 +19,7 @@ import type { main } from '../wailsjs/go/models'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
+import SearchPanel from './components/SearchPanel.vue'
 import UtilityDrawer from './components/UtilityDrawer.vue'
 import UtilityRail from './components/UtilityRail.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
@@ -79,6 +80,7 @@ const sidebarWidth = ref(getInitialSidebarWidth())
 const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 const menuEventCleanups: Array<() => void> = []
+const searchPanel = ref<{ focus: () => void } | null>(null)
 
 let sidebarResizeStartX = 0
 let sidebarResizeStartWidth = sidebarWidth.value
@@ -433,8 +435,13 @@ function handleKeydown(event: KeyboardEvent) {
   }
   if ((event.ctrlKey || event.metaKey) && key === 'f') {
     event.preventDefault()
-    openUtilityPanel('search')
+    void focusEditorSearch()
   }
+}
+
+async function focusEditorSearch() {
+  await nextTick()
+  searchPanel.value?.focus()
 }
 
 function switchTheme() {
@@ -854,6 +861,17 @@ function setError(error: unknown) {
       />
 
       <main class="editor-pane">
+        <SearchPanel
+          ref="searchPanel"
+          class="editor-search-panel"
+          :query="searchQuery"
+          :result="searchResult"
+          :active-index="activeSearchIndex"
+          @update:query="searchQuery = $event"
+          @previous="goToPreviousMatch"
+          @next="goToNextMatch"
+        />
+
         <DocumentTabs
           :documents="openDocuments"
           :active-path="activeFilePath"
@@ -884,14 +902,9 @@ function setError(error: unknown) {
         :active-panel="activeUtilityPanel"
         :outline="outline"
         :outline-font-size="layoutFontSizes.outline"
-        v-model:search-query="searchQuery"
-        :search-result="searchResult"
-        :active-search-index="activeSearchIndex"
         :draft-layout-font-sizes="draftLayoutFontSizes"
         :draft-editor-width="draftEditorWidth"
         :draft-attachment-directories="draftAttachmentDirectories"
-        @previous-match="goToPreviousMatch"
-        @next-match="goToNextMatch"
         @update-font-size="setDraftLayoutFontSize"
         @update-editor-width="setDraftEditorWidth"
         @update-attachment-directory="setDraftAttachmentDirectory"
