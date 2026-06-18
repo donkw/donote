@@ -834,7 +834,6 @@ function setError(error: unknown) {
       :save-status-text="saveStatusText"
       :save-state="activeSaveState"
       @toggle-sidebar="showSidebar = !showSidebar"
-      @insert-markdown="insertMarkdown"
       @search="openUtilityPanel('search')"
       @settings="openUtilityPanel('settings')"
       @save="flushSave"
@@ -887,6 +886,7 @@ function setError(error: unknown) {
           :document="activeDocument"
           :resolve-image-source="resolveEditorImageSource"
           @paste-files="handlePasteFiles"
+          @insert-markdown="insertMarkdown"
         />
       </main>
 

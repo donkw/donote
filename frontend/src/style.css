@@ -226,7 +226,21 @@ textarea:focus-visible {
 }
 
 .format-toolbar {
-  min-width: 250px;
+  min-width: 0;
+}
+
+.format-toolbar--vertical {
+  display: inline-flex;
+  flex-direction: column;
+  width: 40px;
+  min-width: 40px;
+  height: auto;
+  min-height: 0;
+  padding: 4px;
+}
+
+.format-toolbar--vertical.el-button-group .tool-button.el-button {
+  border-radius: 7px;
 }
 
 .window-actions {
@@ -684,7 +698,7 @@ textarea:focus-visible {
 
 .editor-surface {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
 }
@@ -707,15 +721,27 @@ textarea:focus-visible {
 }
 
 .milkdown-shell {
+  display: grid;
+  grid-template-columns: 40px minmax(0, min(var(--editor-content-width, 900px), calc(100% - 52px)));
+  align-items: start;
+  justify-content: center;
+  column-gap: 12px;
   min-height: 0;
   overflow: auto;
-  padding: 0 38px 48px;
+  padding: 38px 38px 48px;
+}
+
+.editor-format-toolbar {
+  position: sticky;
+  top: 18px;
+  z-index: 12;
+  justify-self: end;
 }
 
 .milkdown-editor {
-  width: min(var(--editor-content-width, 900px), 100%);
+  width: 100%;
   min-height: calc(100vh - var(--header-height) - 142px);
-  margin: 0 auto;
+  margin: 0;
   padding: 38px 54px 58px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -921,13 +947,8 @@ textarea:focus-visible {
     flex-basis: 220px;
   }
 
-  .format-toolbar {
-    min-width: auto;
-  }
-
   .milkdown-shell {
-    padding-right: 28px;
-    padding-left: 28px;
+    padding: 28px 28px 48px;
   }
 
   .milkdown-editor {

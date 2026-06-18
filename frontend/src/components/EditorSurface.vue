@@ -14,6 +14,7 @@ defineProps<{
 defineEmits<{
   (event: 'update:modelValue', value: string): void
   (event: 'paste-files', files: File[]): void
+  (event: 'insert-markdown', markdown: string): void
 }>()
 </script>
 
@@ -26,6 +27,7 @@ defineEmits<{
         :resolve-image-source="resolveImageSource"
         @update:model-value="$emit('update:modelValue', $event)"
         @paste-files="$emit('paste-files', $event)"
+        @insert-markdown="$emit('insert-markdown', $event)"
       />
     </template>
 

@@ -9,8 +9,9 @@ vi.mock('./MilkdownEditor.vue', () => ({
     props: {
       modelValue: { type: String, required: true },
       activePath: { type: String, required: true },
+      resolveImageSource: { type: Function, default: undefined },
     },
-    emits: ['update:modelValue'],
+    emits: ['update:modelValue', 'paste-files', 'insert-markdown'],
     template: `
       <div class="mock-milkdown">
         <textarea
@@ -67,6 +68,19 @@ describe('EditorSurface', () => {
     await wrapper.get('[data-test="mock-editor"]').setValue('# Revised')
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['# Revised'])
+  })
+
+  test('forwards format toolbar insert events from the editor', () => {
+    const wrapper = mount(EditorSurface, {
+      props: {
+        document,
+        modelValue: '# Draft',
+      },
+    })
+
+    wrapper.findComponent({ name: 'MilkdownEditor' }).vm.$emit('insert-markdown', '**加粗文本**')
+
+    expect(wrapper.emitted('insert-markdown')?.[0]).toEqual(['**加粗文本**'])
   })
 
   test('renders an empty state without workspace management buttons', () => {

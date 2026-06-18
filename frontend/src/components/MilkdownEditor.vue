@@ -1,6 +1,11 @@
 <template>
   <MilkdownProvider>
     <div class="milkdown-shell" @paste.capture="handlePaste">
+      <FormatToolbar
+        class="editor-format-toolbar"
+        tooltip-placement="right"
+        @insert-markdown="$emit('insert-markdown', $event)"
+      />
       <div class="milkdown-editor">
         <MilkdownHost
           :active-path="activePath"
@@ -15,6 +20,7 @@
 
 <script setup lang="ts">
 import { MilkdownProvider } from '@milkdown/vue'
+import FormatToolbar from './FormatToolbar.vue'
 import MilkdownHost from './MilkdownHost.vue'
 
 type ResolveImageSource = (source: string, activePath: string) => Promise<string>
@@ -28,6 +34,7 @@ defineProps<{
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
   (event: 'paste-files', files: File[]): void
+  (event: 'insert-markdown', markdown: string): void
 }>()
 
 function emitUpdate(value: string) {

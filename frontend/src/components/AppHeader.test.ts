@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import AppHeader from './AppHeader.vue'
 
 describe('AppHeader', () => {
-  test('renders brand, save status, and format actions', () => {
+  test('renders brand, save status, and window actions without format toolbar', () => {
     const wrapper = mount(AppHeader, {
       props: {
         showSidebar: true,
@@ -15,8 +15,8 @@ describe('AppHeader', () => {
 
     expect(wrapper.text()).toContain('Donote')
     expect(wrapper.text()).toContain('有未保存更改')
-    expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="format-table"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="format-table"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="outline-toggle"]').exists()).toBe(false)
     expect(wrapper.get('.save-status').attributes('data-state')).toBe('dirty')
   })
@@ -32,18 +32,13 @@ describe('AppHeader', () => {
     })
 
     await wrapper.get('[data-test="sidebar-toggle"]').trigger('click')
-    await wrapper.get('[data-test="format-heading"]').trigger('click')
-    await wrapper.get('[data-test="format-table"]').trigger('click')
     await wrapper.get('[data-test="settings-toggle"]').trigger('click')
     await wrapper.get('[data-test="search-toggle"]').trigger('click')
     await wrapper.get('[data-test="save-now"]').trigger('click')
     await wrapper.get('[data-test="theme-toggle"]').trigger('click')
 
     expect(wrapper.emitted('toggle-sidebar')).toHaveLength(1)
-    expect(wrapper.emitted('insert-markdown')?.[0]).toEqual(['# 标题'])
-    expect(wrapper.emitted('insert-markdown')?.[1]).toEqual([
-      '| 列 1 | 列 2 | 列 3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |',
-    ])
+    expect(wrapper.emitted('insert-markdown')).toBeUndefined()
     expect(wrapper.emitted('settings')).toHaveLength(1)
     expect(wrapper.emitted('search')).toHaveLength(1)
     expect(wrapper.emitted('save')).toHaveLength(1)

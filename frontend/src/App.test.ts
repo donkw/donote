@@ -81,7 +81,7 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
       activePath: { type: String, default: '' },
       resolveImageSource: { type: Function, default: undefined },
     },
-    emits: ['update:modelValue', 'paste-files'],
+    emits: ['update:modelValue', 'paste-files', 'insert-markdown'],
     setup(props, { emit }) {
       onMounted(() => {
         if (emitInitialMarkdown) {
@@ -98,8 +98,14 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
 
       return { handlePaste }
     },
-    template:
-      '<textarea class="mock-editor" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @paste="handlePaste" />',
+    template: `
+      <div>
+        <div data-test="format-toolbar" class="format-toolbar format-toolbar--vertical editor-format-toolbar">
+          <button data-test="format-heading" @click="$emit('insert-markdown', '# 标题')">标题</button>
+        </div>
+        <textarea class="mock-editor" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" @paste="handlePaste" />
+      </div>
+    `,
   }),
 }))
 
@@ -171,7 +177,9 @@ describe('App shell', () => {
     const wrapper = mount(App)
 
     expect(wrapper.get('[data-test="topbar"]').classes()).toContain('app-header')
-    expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="topbar"]').find('[data-test="format-toolbar"]').exists()).toBe(
+      false,
+    )
     expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="utility-outline"]').exists()).toBe(true)
   })
@@ -283,6 +291,15 @@ describe('App shell', () => {
     await flushPromises()
     expect(ReadMarkdown).toHaveBeenCalledWith('intro.md')
     expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Intro')
+
+    expect(wrapper.get('[data-test="format-toolbar"]').classes()).toContain(
+      'format-toolbar--vertical',
+    )
+    await wrapper.get('[data-test="format-heading"]').trigger('click')
+    await flushPromises()
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe(
+      '# Intro\n\n# 标题',
+    )
   })
 
   test('opens multiple markdown files as tabs and preserves each tab draft', async () => {
