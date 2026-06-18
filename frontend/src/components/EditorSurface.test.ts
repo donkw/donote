@@ -33,7 +33,7 @@ const document = {
 }
 
 describe('EditorSurface', () => {
-  test('hides the editor heading text and emits rename and delete actions', async () => {
+  test('hides the editor toolbar text and action buttons', () => {
     const wrapper = mount(EditorSurface, {
       props: {
         document,
@@ -43,16 +43,14 @@ describe('EditorSurface', () => {
 
     expect(wrapper.find('.document-heading').exists()).toBe(false)
     expect(wrapper.find('.document-label').exists()).toBe(false)
+    expect(wrapper.find('.document-toolbar').exists()).toBe(false)
+    expect(wrapper.find('.document-actions').exists()).toBe(false)
     expect(wrapper.find('h1').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('当前笔记')
     expect(wrapper.text()).not.toContain('draft.md')
-
-    const buttons = wrapper.findAll('button')
-    await buttons[0].trigger('click')
-    await buttons[1].trigger('click')
-
-    expect(wrapper.emitted('rename')?.length).toBe(1)
-    expect(wrapper.emitted('delete')?.length).toBe(1)
+    expect(wrapper.find('button').exists()).toBe(false)
+    expect(wrapper.emitted('rename')).toBeUndefined()
+    expect(wrapper.emitted('delete')).toBeUndefined()
   })
 
   test('renders MilkdownEditor without duplicate shell wrappers and forwards model updates', async () => {

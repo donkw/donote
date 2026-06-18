@@ -3,15 +3,12 @@ import { defineComponent, onMounted } from 'vue'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import App from './App.vue'
-import EditorSurface from './components/EditorSurface.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   CreateMarkdown,
-  DeletePath,
   ListWorkspace,
   OpenWorkspace,
   ReadMarkdown,
-  RenamePath,
   SaveMarkdown,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -41,8 +38,6 @@ vi.mock('../wailsjs/go/main/App', () => ({
   ReadMarkdown: vi.fn(),
   SaveMarkdown: vi.fn().mockResolvedValue({ path: 'intro.md', savedAt: 'now' }),
   CreateMarkdown: vi.fn(),
-  RenamePath: vi.fn(),
-  DeletePath: vi.fn(),
 }))
 
 vi.mock('../wailsjs/runtime/runtime', () => ({
@@ -614,155 +609,6 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(CreateMarkdown).not.toHaveBeenCalled()
-  })
-
-  test('renames the active document from an Element Plus prompt', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'renamed.md' })
-    vi.mocked(SelectWorkspace).mockResolvedValue({
-      rootPath: 'D:/notes',
-      name: 'notes',
-      tree: [
-        {
-          name: 'intro.md',
-          path: 'intro.md',
-          type: 'file',
-        } as any,
-      ],
-    } as any)
-    vi.mocked(ReadMarkdown).mockResolvedValue({
-      path: 'intro.md',
-      name: 'intro.md',
-      content: '# Intro',
-    })
-    vi.mocked(RenamePath).mockResolvedValue({
-      name: 'renamed.md',
-      path: 'renamed.md',
-      type: 'file',
-    } as any)
-    vi.mocked(ListWorkspace).mockResolvedValue([
-      {
-        name: 'renamed.md',
-        path: 'renamed.md',
-        type: 'file',
-      } as any,
-    ])
-
-    const wrapper = mount(App)
-    emitMenuEvent('menu:open-workspace')
-    await flushPromises()
-    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
-    await flushPromises()
-
-    wrapper.getComponent(EditorSurface).vm.$emit('rename')
-    await flushPromises()
-
-    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
-      '请输入新的笔记名称',
-      '重命名笔记',
-      expect.objectContaining({
-        inputValue: 'intro.md',
-        confirmButtonText: '重命名',
-        cancelButtonText: '取消',
-      }),
-    )
-    expect(RenamePath).toHaveBeenCalledWith('intro.md', 'renamed.md')
-    expect(ListWorkspace).toHaveBeenCalled()
-    expect(wrapper.find('[data-test="tab-renamed.md"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('renamed.md')
-  })
-
-  test('does not rename the active document when the Element Plus prompt is whitespace only', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: '   ' })
-    vi.mocked(SelectWorkspace).mockResolvedValue({
-      rootPath: 'D:/notes',
-      name: 'notes',
-      tree: [
-        {
-          name: 'intro.md',
-          path: 'intro.md',
-          type: 'file',
-        } as any,
-      ],
-    } as any)
-    vi.mocked(ReadMarkdown).mockResolvedValue({
-      path: 'intro.md',
-      name: 'intro.md',
-      content: '# Intro',
-    })
-
-    const wrapper = mount(App)
-    emitMenuEvent('menu:open-workspace')
-    await flushPromises()
-    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
-    await flushPromises()
-
-    wrapper.getComponent(EditorSurface).vm.$emit('rename')
-    await flushPromises()
-
-    expect(RenamePath).not.toHaveBeenCalled()
-  })
-
-  test('uses Element Plus confirmation before deleting the active document', async () => {
-    elementPlusMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
-    vi.mocked(SelectWorkspace).mockResolvedValue({
-      rootPath: 'D:/notes',
-      name: 'notes',
-      tree: [
-        {
-          name: 'intro.md',
-          path: 'intro.md',
-          type: 'file',
-        } as any,
-        {
-          name: 'next.md',
-          path: 'next.md',
-          type: 'file',
-        } as any,
-      ],
-    } as any)
-    vi.mocked(ReadMarkdown).mockImplementation(async (path) => ({
-      path,
-      name: path,
-      content: path === 'intro.md' ? '# Intro' : '# Next',
-    }))
-    vi.mocked(ListWorkspace).mockResolvedValue([
-      {
-        name: 'intro.md',
-        path: 'intro.md',
-        type: 'file',
-      } as any,
-    ])
-
-    const wrapper = mount(App)
-    emitMenuEvent('menu:open-workspace')
-    await flushPromises()
-    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
-    await flushPromises()
-    await wrapper.get('[data-test="file-next.md"]').trigger('click')
-    await flushPromises()
-
-    wrapper.getComponent(EditorSurface).vm.$emit('delete')
-    await flushPromises()
-
-    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
-      '删除「next.md」？此操作无法撤销。',
-      '删除笔记',
-      expect.objectContaining({
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-      }),
-    )
-    expect(DeletePath).not.toHaveBeenCalled()
-    expect(wrapper.find('[data-test="tab-next.md"]').exists()).toBe(true)
-
-    elementPlusMocks.confirm.mockResolvedValueOnce('confirm')
-    wrapper.getComponent(EditorSurface).vm.$emit('delete')
-    await flushPromises()
-
-    expect(DeletePath).toHaveBeenCalledWith('next.md')
-    expect(ListWorkspace).toHaveBeenCalled()
-    expect(wrapper.find('[data-test="tab-next.md"]').exists()).toBe(false)
-    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Intro')
   })
 
   test('stores API errors and shows Element Plus error feedback', async () => {

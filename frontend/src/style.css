@@ -610,35 +610,6 @@ textarea:focus-visible {
   overflow: hidden;
 }
 
-.document-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
-  min-height: 52px;
-  padding: 10px 38px 4px;
-}
-
-.document-actions {
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  gap: 4px;
-  height: 38px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow-control);
-}
-
-.document-actions .el-button {
-  width: 30px;
-  height: 30px;
-  min-height: 30px;
-  margin: 0;
-}
-
 .empty-state {
   align-self: center;
   justify-self: center;
@@ -839,7 +810,6 @@ textarea:focus-visible {
     min-width: auto;
   }
 
-  .document-toolbar,
   .milkdown-shell {
     padding-right: 28px;
     padding-left: 28px;

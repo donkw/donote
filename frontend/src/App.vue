@@ -3,11 +3,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CreateMarkdown,
-  DeletePath,
   ListWorkspace,
   OpenWorkspace,
   ReadMarkdown,
-  RenamePath,
   SaveMarkdown,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -219,58 +217,6 @@ async function createNote() {
     const node = await CreateMarkdown('', name)
     workspace.value.tree = await reloadTreeFromCurrentWorkspace()
     await selectFile(node.path)
-  } catch (error) {
-    setError(error)
-  }
-}
-
-async function renameActiveDocument() {
-  const document = activeDocument.value
-  if (!document || !workspace.value) return
-  let nextName = ''
-  try {
-    const result = await ElMessageBox.prompt('请输入新的笔记名称', '重命名笔记', {
-      inputValue: document.name,
-      confirmButtonText: '重命名',
-      cancelButtonText: '取消',
-    })
-    nextName = result.value.trim()
-  } catch {
-    return
-  }
-  if (!nextName || nextName === document.name) return
-
-  try {
-    const renamed = await RenamePath(document.path, nextName)
-    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
-    document.name = renamed.name
-    document.path = renamed.path
-    activeDocumentPath.value = renamed.path
-  } catch (error) {
-    setError(error)
-  }
-}
-
-async function deleteActiveDocument() {
-  const document = activeDocument.value
-  if (!document || !workspace.value) return
-  try {
-    await ElMessageBox.confirm(`删除「${document.name}」？此操作无法撤销。`, '删除笔记', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-  } catch {
-    return
-  }
-
-  try {
-    await DeletePath(document.path)
-    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
-    const deletedIndex = openDocuments.value.findIndex((item) => item.path === document.path)
-    openDocuments.value = openDocuments.value.filter((item) => item.path !== document.path)
-    activeDocumentPath.value =
-      openDocuments.value[Math.max(0, deletedIndex - 1)]?.path ?? openDocuments.value[0]?.path ?? ''
   } catch (error) {
     setError(error)
   }
@@ -496,8 +442,6 @@ function setError(error: unknown) {
         <EditorSurface
           v-model="editorContent"
           :document="activeDocument"
-          @rename="renameActiveDocument"
-          @delete="deleteActiveDocument"
         />
       </main>
 
