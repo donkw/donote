@@ -1,9 +1,11 @@
 <template>
-  <Milkdown />
+  <div ref="hostRoot">
+    <Milkdown />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { defaultValueCtx, Editor, nodeViewCtx, rootCtx } from '@milkdown/kit/core'
+import { defaultValueCtx, Editor, rootCtx } from '@milkdown/kit/core'
 import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { cursor } from '@milkdown/kit/plugin/cursor'
 import { history } from '@milkdown/kit/plugin/history'
@@ -12,10 +14,8 @@ import { trailing } from '@milkdown/kit/plugin/trailing'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { replaceAll } from '@milkdown/kit/utils'
-import type { Node as ProseMirrorNode } from '@milkdown/prose/model'
-import type { NodeView as ProseMirrorNodeView, NodeViewConstructor } from '@milkdown/prose/view'
 import { Milkdown, useEditor } from '@milkdown/vue'
-import { watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 type ResolveImageSource = (source: string, activePath: string) => Promise<string>
 
@@ -31,16 +31,14 @@ const emit = defineEmits<{
 
 let lastMarkdown = props.modelValue
 const resolvedImageSourceCache = new Map<string, string>()
+const hostRoot = ref<HTMLElement | null>(null)
+let imageObserver: MutationObserver | null = null
 
 const editor = useEditor((root) =>
   Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, props.modelValue)
-      ctx.update(nodeViewCtx, (views) => [
-        ...views,
-        ['image', createImageNodeView] as [string, NodeViewConstructor],
-      ])
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
         lastMarkdown = markdown
         emit('update:modelValue', markdown)
@@ -55,49 +53,46 @@ const editor = useEditor((root) =>
     .use(listener),
 )
 
-function createImageNodeView(node: ProseMirrorNode): ProseMirrorNodeView {
-  const image = document.createElement('img')
-  let currentNode = node
+onMounted(() => {
+  imageObserver = new MutationObserver(() => {
+    void resolveWorkspaceImages()
+  })
+  if (hostRoot.value) {
+    imageObserver.observe(hostRoot.value, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src'],
+    })
+  }
+  void resolveWorkspaceImages()
+})
 
-  const render = () => {
-    const source = String(currentNode.attrs.src ?? '')
-    image.dataset.markdownSource = source
-    image.src = source
-    image.alt = String(currentNode.attrs.alt ?? '')
-    const title = currentNode.attrs.title ? String(currentNode.attrs.title) : ''
-    if (title) {
-      image.title = title
-    } else {
-      image.removeAttribute('title')
-    }
+onBeforeUnmount(() => {
+  imageObserver?.disconnect()
+  imageObserver = null
+})
+
+async function resolveWorkspaceImages() {
+  await nextTick()
+  hostRoot.value?.querySelectorAll('img').forEach((image) => {
+    const source = image.dataset.markdownSource || image.getAttribute('src') || ''
     void resolveImageElementSource(image, source)
-  }
-
-  render()
-
-  return {
-    dom: image,
-    update(nextNode) {
-      if (nextNode.type.name !== currentNode.type.name) {
-        return false
-      }
-      currentNode = nextNode
-      render()
-      return true
-    },
-    ignoreMutation: () => true,
-  }
+  })
 }
 
 async function resolveImageElementSource(image: HTMLImageElement, source: string) {
   if (!props.resolveImageSource || !shouldResolveWorkspaceImageSource(source) || !props.activePath) {
     return
   }
+  image.dataset.markdownSource = source
   const activePath = props.activePath
   const cacheKey = `${activePath}\n${source}`
   const cached = resolvedImageSourceCache.get(cacheKey)
   if (cached) {
-    image.src = cached
+    if (image.src !== cached) {
+      image.src = cached
+    }
     return
   }
 
@@ -105,7 +100,9 @@ async function resolveImageElementSource(image: HTMLImageElement, source: string
     const resolved = await props.resolveImageSource(source, activePath)
     resolvedImageSourceCache.set(cacheKey, resolved)
     if (image.dataset.markdownSource === source && props.activePath === activePath) {
-      image.src = resolved
+      if (image.src !== resolved) {
+        image.src = resolved
+      }
     }
   } catch {
     // Keep the markdown src when the local preview cannot be resolved.
@@ -131,6 +128,7 @@ watch(
   () => {
     lastMarkdown = props.modelValue
     editor.get()?.action(replaceAll(props.modelValue, true))
+    void resolveWorkspaceImages()
   },
 )
 
@@ -142,6 +140,7 @@ watch(
     }
     lastMarkdown = value
     editor.get()?.action(replaceAll(value, true))
+    void resolveWorkspaceImages()
   },
 )
 </script>
