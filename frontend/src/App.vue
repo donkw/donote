@@ -1,30 +1,5 @@
 <script setup lang="ts">
-import {
-  Bold,
-  ChevronDown,
-  ChevronRight,
-  Code,
-  FilePlus,
-  FileText,
-  Folder,
-  FolderOpen,
-  Heading1,
-  Italic,
-  List,
-  ListTree,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
-  Pencil,
-  Quote,
-  Search,
-  Settings,
-  Sun,
-  Trash2,
-  X,
-} from '@lucide/vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CreateMarkdown,
@@ -37,10 +12,14 @@ import {
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
-import MilkdownEditor from './components/MilkdownEditor.vue'
+import AppHeader from './components/AppHeader.vue'
+import DocumentTabs from './components/DocumentTabs.vue'
+import EditorSurface from './components/EditorSurface.vue'
+import UtilityDrawer from './components/UtilityDrawer.vue'
+import UtilityRail from './components/UtilityRail.vue'
+import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   getInitialLayoutFontSizes,
-  layoutFontSizeControls,
   normalizeLayoutFontSizes,
   saveLayoutFontSizes,
   type LayoutFontSizeArea,
@@ -49,12 +28,8 @@ import {
 import { extractOutline } from './lib/outline'
 import { findMatches, nextMatchIndex, previousMatchIndex } from './lib/search'
 import { applyTheme, getInitialTheme, toggleTheme, type ThemeMode } from './lib/theme'
-import {
-  getCollapsedFolderPaths,
-  saveCollapsedFolderPaths,
-  toggleCollapsedFolderPath,
-} from './lib/treeExpansion'
-import type { OpenDocument, SaveState, UtilityPanel, VisibleNode } from './types/app'
+import { getCollapsedFolderPaths, saveCollapsedFolderPaths } from './lib/treeExpansion'
+import type { OpenDocument, SaveState, UtilityPanel } from './types/app'
 
 const lastWorkspaceStorageKey = 'donote.lastWorkspaceRoot'
 
@@ -64,9 +39,6 @@ const activeDocumentPath = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const showSidebar = ref(true)
-const showOutline = ref(true)
-const showSearch = ref(false)
-const showSettings = ref(false)
 const activeUtilityPanel = ref<UtilityPanel>('outline')
 const showUtilityDrawer = ref(false)
 const searchQuery = ref('')
@@ -77,8 +49,10 @@ const layoutFontSizes = ref(getInitialLayoutFontSizes())
 const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 
-const visibleNodes = computed(() =>
-  workspace.value ? flattenTree(workspace.value.tree, 0, collapsedFolderPaths.value) : [],
+const expandedFolderPaths = computed(() =>
+  workspace.value
+    ? collectFolderPaths(workspace.value.tree).filter((path) => !collapsedFolderPaths.value.has(path))
+    : [],
 )
 const activeDocument = computed(() =>
   openDocuments.value.find((document) => document.path === activeDocumentPath.value) ?? null,
@@ -213,7 +187,17 @@ async function createNote() {
     await openWorkspace()
     if (!workspace.value) return
   }
-  const name = window.prompt('新笔记名称', '未命名.md')
+  let name = ''
+  try {
+    const result = await ElMessageBox.prompt('请输入笔记名称', '新建笔记', {
+      inputValue: '未命名.md',
+      confirmButtonText: '创建',
+      cancelButtonText: '取消',
+    })
+    name = result.value.trim()
+  } catch {
+    return
+  }
   if (!name) return
 
   try {
@@ -228,7 +212,17 @@ async function createNote() {
 async function renameActiveDocument() {
   const document = activeDocument.value
   if (!document || !workspace.value) return
-  const nextName = window.prompt('重命名笔记', document.name)
+  let nextName = ''
+  try {
+    const result = await ElMessageBox.prompt('请输入新的笔记名称', '重命名笔记', {
+      inputValue: document.name,
+      confirmButtonText: '重命名',
+      cancelButtonText: '取消',
+    })
+    nextName = result.value.trim()
+  } catch {
+    return
+  }
   if (!nextName || nextName === document.name) return
 
   try {
@@ -245,8 +239,15 @@ async function renameActiveDocument() {
 async function deleteActiveDocument() {
   const document = activeDocument.value
   if (!document || !workspace.value) return
-  const confirmed = window.confirm(`删除「${document.name}」？此操作无法撤销。`)
-  if (!confirmed) return
+  try {
+    await ElMessageBox.confirm(`删除「${document.name}」？此操作无法撤销。`, '删除笔记', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
 
   try {
     await DeletePath(document.path)
@@ -297,7 +298,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
   if ((event.ctrlKey || event.metaKey) && key === 'f') {
     event.preventDefault()
-    showSearch.value = true
+    openUtilityPanel('search')
   }
 }
 
@@ -305,40 +306,46 @@ function switchTheme() {
   theme.value = toggleTheme(theme.value)
 }
 
-function openSettings() {
-  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  showSettings.value = true
-}
-
-function toggleUtilityPanel(panel: UtilityPanel) {
-  if (activeUtilityPanel.value === panel) {
-    showUtilityDrawer.value = !showUtilityDrawer.value
-    return
-  }
-  activeUtilityPanel.value = panel
-  showUtilityDrawer.value = true
+function prepareUtilityPanel(panel: UtilityPanel) {
   if (panel === 'settings') {
     draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   }
 }
 
-function closeSettings() {
-  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  showSettings.value = false
+function openUtilityPanel(panel: UtilityPanel) {
+  activeUtilityPanel.value = panel
+  prepareUtilityPanel(panel)
+  showUtilityDrawer.value = true
 }
 
-function setDraftLayoutFontSize(area: LayoutFontSizeArea, event: Event) {
-  const target = event.target as HTMLInputElement
+function toggleUtilityPanel(panel: UtilityPanel) {
+  if (activeUtilityPanel.value === panel) {
+    const shouldOpen = !showUtilityDrawer.value
+    if (shouldOpen) {
+      prepareUtilityPanel(panel)
+    }
+    showUtilityDrawer.value = shouldOpen
+    return
+  }
+  openUtilityPanel(panel)
+}
+
+function closeSettings() {
+  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
+  showUtilityDrawer.value = false
+}
+
+function setDraftLayoutFontSize(area: LayoutFontSizeArea, value: number) {
   draftLayoutFontSizes.value = normalizeLayoutFontSizes({
     ...draftLayoutFontSizes.value,
-    [area]: Number(target.value),
+    [area]: value,
   })
 }
 
 function saveSettings() {
   layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  showSettings.value = false
+  showUtilityDrawer.value = false
 }
 
 function goToNextMatch() {
@@ -361,10 +368,15 @@ function switchDocument(path: string) {
   activeSearchIndex.value = -1
 }
 
-function closeDocument(document: OpenDocument) {
+async function closeDocument(document: OpenDocument) {
   if (isDocumentDirty(document)) {
-    const confirmed = window.confirm(`「${document.name}」有未保存更改，关闭后将丢失。确认关闭？`)
-    if (!confirmed) {
+    try {
+      await ElMessageBox.confirm(`「${document.name}」有未保存更改，关闭后将丢失。`, '关闭未保存笔记', {
+        confirmButtonText: '关闭',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+    } catch {
       return
     }
   }
@@ -390,298 +402,104 @@ function normalizeMarkdownForDirtyCheck(content: string): string {
   return content.replace(/\s+$/g, '')
 }
 
-function toggleFolder(path: string) {
-  if (!workspace.value) return
-  const collapsedPaths = toggleCollapsedFolderPath([...collapsedFolderPaths.value], path)
-  collapsedFolderPaths.value = new Set(collapsedPaths)
-  saveCollapsedFolderPaths(workspace.value.rootPath, collapsedPaths)
-}
-
-function isFolderCollapsed(path: string): boolean {
-  return collapsedFolderPaths.value.has(path)
-}
-
-function flattenTree(
-  nodes: main.FileNode[],
-  depth: number,
-  collapsedPaths: Set<string>,
-): VisibleNode[] {
+function collectFolderPaths(nodes: main.FileNode[]): string[] {
   return nodes.flatMap((node) => {
-    const visible: VisibleNode[] = [{ node, depth }]
-    if (node.type === 'folder' && node.children && !collapsedPaths.has(node.path)) {
-      visible.push(...flattenTree(node.children, depth + 1, collapsedPaths))
-    }
-    return visible
+    if (node.type !== 'folder') return []
+    return [node.path, ...collectFolderPaths(node.children ?? [])]
   })
 }
 
+function setFolderCollapsed(path: string, collapsed: boolean) {
+  if (!workspace.value) return
+  const next = new Set(collapsedFolderPaths.value)
+  if (collapsed) next.add(path)
+  else next.delete(path)
+  collapsedFolderPaths.value = next
+  saveCollapsedFolderPaths(workspace.value.rootPath, [...next])
+}
+
 function setError(error: unknown) {
-  errorMessage.value = error instanceof Error ? error.message : String(error)
+  const message = error instanceof Error ? error.message : String(error)
+  errorMessage.value = message
+  ElMessage.error(message)
 }
 </script>
 
 <template>
   <div class="app-shell">
-    <header data-test="topbar" class="topbar app-chrome">
-      <div class="brand">
-        <button
-          class="icon-button subtle"
-          type="button"
-          :title="showSidebar ? '隐藏文件树' : '显示文件树'"
-          @click="showSidebar = !showSidebar"
-        >
-          <PanelLeftClose v-if="showSidebar" :size="18" />
-          <PanelLeftOpen v-else :size="18" />
-        </button>
-        <span data-test="brand-mark" class="brand-mark">D</span>
-        <span class="brand-copy">
-          <span class="brand-name">Donote</span>
-          <span class="brand-subtitle">Markdown Notes</span>
-        </span>
-      </div>
-
-      <div data-test="format-toolbar" class="toolbar-group control-cluster format-toolbar">
-        <button class="tool-button" type="button" title="标题" @click="insertMarkdown('# 标题')">
-          <Heading1 :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="加粗" @click="insertMarkdown('**加粗文本**')">
-          <Bold :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="斜体" @click="insertMarkdown('*斜体文本*')">
-          <Italic :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="列表" @click="insertMarkdown('- 列表项')">
-          <List :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="引用" @click="insertMarkdown('> 引用')">
-          <Quote :size="17" />
-        </button>
-        <button class="tool-button" type="button" title="代码" @click="insertMarkdown('`代码`')">
-          <Code :size="17" />
-        </button>
-      </div>
-
-      <div class="toolbar-spacer" />
-
-      <div data-test="window-actions" class="toolbar-group control-cluster window-actions">
-        <span v-if="saveStatusText" class="save-status status-pill" :data-state="activeSaveState">
-          {{ saveStatusText }}
-        </span>
-        <button class="icon-button" type="button" title="当前文档搜索" @click="showSearch = !showSearch">
-          <Search :size="18" />
-        </button>
-        <button class="icon-button" type="button" title="立即保存" @click="flushSave">
-          <FileText :size="18" />
-        </button>
-        <button
-          data-test="settings-toggle"
-          class="icon-button"
-          type="button"
-          :title="showSettings ? '隐藏设置' : '显示设置'"
-          @click="showSettings ? closeSettings() : openSettings()"
-        >
-          <Settings :size="18" />
-        </button>
-        <button class="icon-button" type="button" :title="theme === 'dark' ? '切换浅色' : '切换深色'" @click="switchTheme">
-          <Sun v-if="theme === 'dark'" :size="18" />
-          <Moon v-else :size="18" />
-        </button>
-        <button
-          class="icon-button"
-          type="button"
-          :title="showOutline ? '隐藏大纲' : '显示大纲'"
-          @click="showOutline = !showOutline"
-        >
-          <PanelRightClose v-if="showOutline" :size="18" />
-          <PanelRightOpen v-else :size="18" />
-        </button>
-      </div>
-    </header>
+    <AppHeader
+      :show-sidebar="showSidebar"
+      :theme="theme"
+      :save-status-text="saveStatusText"
+      :save-state="activeSaveState"
+      @toggle-sidebar="showSidebar = !showSidebar"
+      @insert-markdown="insertMarkdown"
+      @search="openUtilityPanel('search')"
+      @settings="openUtilityPanel('settings')"
+      @save="flushSave"
+      @toggle-theme="switchTheme"
+    />
 
     <div v-if="errorMessage || activeDocument?.error" class="error-banner">
       {{ errorMessage || activeDocument?.error }}
     </div>
 
-    <div v-if="showSearch" class="searchbar floating-search">
-      <Search :size="16" />
-      <input v-model="searchQuery" class="search-input" placeholder="在当前笔记中搜索" />
-      <span class="search-count">{{ searchResult.matches.length ? `${activeSearchIndex + 1}/${searchResult.matches.length}` : '0/0' }}</span>
-      <button class="text-button" type="button" @click="goToPreviousMatch">上一个</button>
-      <button class="text-button" type="button" @click="goToNextMatch">下一个</button>
-    </div>
-
-    <div v-if="showSettings" class="settings-modal-backdrop" @click.self="closeSettings">
-      <section
-        data-test="settings-dialog"
-        class="settings-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-title"
-      >
-        <header class="settings-dialog-header">
-          <div class="settings-heading">
-            <Settings :size="17" />
-            <div>
-              <h2 id="settings-title">设置</h2>
-              <p>布局字体大小</p>
-            </div>
-          </div>
-          <button class="icon-button subtle" type="button" title="关闭设置" @click="closeSettings">
-            <X :size="18" />
-          </button>
-        </header>
-
-        <div class="font-size-settings">
-          <label v-for="control in layoutFontSizeControls" :key="control.key" class="setting-row">
-            <span>{{ control.label }}</span>
-            <input
-              :data-test="`font-size-${control.key}`"
-              type="range"
-              :min="control.min"
-              :max="control.max"
-              :value="draftLayoutFontSizes[control.key]"
-              @input="setDraftLayoutFontSize(control.key, $event)"
-            />
-            <output>{{ draftLayoutFontSizes[control.key] }}px</output>
-          </label>
-        </div>
-
-        <footer class="settings-actions">
-          <button class="text-button" type="button" @click="closeSettings">取消</button>
-          <button data-test="settings-save" class="primary-button" type="button" @click="saveSettings">
-            保存
-          </button>
-        </footer>
-      </section>
-    </div>
-
     <div
       data-test="workspace-layout"
       class="workspace-layout"
-      :class="{ 'without-sidebar': !showSidebar, 'without-outline': !showOutline }"
+      :class="{ 'without-sidebar': !showSidebar }"
       :style="layoutFontStyle"
     >
-      <aside v-if="showSidebar" class="sidebar">
-        <div class="sidebar-actions">
-          <button data-test="open-workspace" class="primary-button" type="button" @click="openWorkspace">
-            <FolderOpen :size="16" />
-            <span>打开文件夹</span>
-          </button>
-          <button data-test="new-note" class="icon-button" type="button" title="新建笔记" @click="createNote">
-            <FilePlus :size="17" />
-          </button>
-        </div>
-
-        <div v-if="workspace" class="workspace-title">
-          <Folder :size="16" />
-          <span>{{ workspace.name }}</span>
-        </div>
-        <div v-else class="sidebar-empty">还没有打开笔记文件夹</div>
-
-        <div v-if="visibleNodes.length" class="file-tree">
-          <button
-            v-for="{ node, depth } in visibleNodes"
-            :key="node.path"
-            class="tree-row"
-            :class="{ active: node.path === activeFilePath, folder: node.type === 'folder' }"
-            :style="{ paddingLeft: `${12 + depth * 18}px` }"
-            :data-test="node.type === 'file' ? `file-${node.path}` : `folder-${node.path}`"
-            type="button"
-            :aria-expanded="node.type === 'folder' ? !isFolderCollapsed(node.path) : undefined"
-            @click="node.type === 'folder' ? toggleFolder(node.path) : selectFile(node.path)"
-          >
-            <ChevronRight v-if="node.type === 'folder' && isFolderCollapsed(node.path)" :size="14" />
-            <ChevronDown v-else-if="node.type === 'folder'" :size="14" />
-            <FileText v-else :size="14" />
-            <span>{{ node.name }}</span>
-          </button>
-        </div>
-      </aside>
+      <WorkspaceSidebar
+        v-if="showSidebar"
+        :workspace-name="workspace?.name ?? ''"
+        :tree="workspace?.tree ?? []"
+        :active-file-path="activeFilePath"
+        :expanded-folder-paths="expandedFolderPaths"
+        @open-workspace="openWorkspace"
+        @create-note="createNote"
+        @select-file="selectFile"
+        @folder-expanded="setFolderCollapsed($event, false)"
+        @folder-collapsed="setFolderCollapsed($event, true)"
+      />
 
       <main class="editor-pane">
-        <div v-if="openDocuments.length" class="document-tabs" role="tablist" aria-label="已打开笔记">
-          <span
-            v-for="document in openDocuments"
-            :key="document.path"
-            class="document-tab"
-            :class="{
-              active: document.path === activeFilePath,
-              dirty: isDocumentDirty(document),
-            }"
-          >
-            <button
-              class="document-tab-main"
-              :data-test="`tab-${document.path}`"
-              type="button"
-              role="tab"
-              :aria-selected="document.path === activeFilePath"
-              @click="switchDocument(document.path)"
-            >
-              <FileText :size="14" />
-              <span>{{ document.name }}</span>
-            </button>
-            <button
-              class="tab-close-button"
-              :data-test="`tab-close-${document.path}`"
-              type="button"
-              :title="`关闭 ${document.name}`"
-              @click="closeDocument(document)"
-            >
-              <X :size="13" />
-            </button>
-          </span>
-        </div>
-
-        <div v-if="activeDocument" class="document-toolbar">
-          <div>
-            <p class="document-label">当前笔记</p>
-            <h1>{{ activeDocument.name }}</h1>
-          </div>
-          <div class="document-actions">
-            <button class="icon-button" type="button" title="重命名" @click="renameActiveDocument">
-              <Pencil :size="17" />
-            </button>
-            <button class="icon-button danger" type="button" title="删除" @click="deleteActiveDocument">
-              <Trash2 :size="17" />
-            </button>
-          </div>
-        </div>
-
-        <MilkdownEditor
-          v-if="activeDocument"
-          v-model="editorContent"
-          :active-path="activeDocument.path"
+        <DocumentTabs
+          :documents="openDocuments"
+          :active-path="activeFilePath"
+          @update:active-path="switchDocument"
+          @close="closeDocument"
         />
 
-        <div v-else class="empty-state">
-          <ListTree :size="42" />
-          <h1>选择一个笔记文件夹开始写作</h1>
-          <p>打开包含 Markdown 文件的文件夹，或新建第一篇笔记。</p>
-          <button class="primary-button large" type="button" @click="openWorkspace">
-            <FolderOpen :size="18" />
-            <span>打开文件夹</span>
-          </button>
-        </div>
+        <EditorSurface
+          v-model="editorContent"
+          :document="activeDocument"
+          @rename="renameActiveDocument"
+          @delete="deleteActiveDocument"
+          @open-workspace="openWorkspace"
+        />
       </main>
 
-      <aside v-if="showOutline" class="outline-panel">
-        <div class="panel-title">
-          <ListTree :size="16" />
-          <span>大纲</span>
-        </div>
-        <div v-if="outline.length" class="outline-list">
-          <button
-            v-for="item in outline"
-            :key="item.id"
-            class="outline-row"
-            type="button"
-            :style="{ paddingLeft: `${8 + (item.level - 1) * 14}px` }"
-          >
-            {{ item.text }}
-          </button>
-        </div>
-        <p v-else class="outline-empty">当前笔记没有标题</p>
-      </aside>
+      <UtilityRail
+        :active-panel="activeUtilityPanel"
+        :drawer-open="showUtilityDrawer"
+        @select="toggleUtilityPanel"
+      />
+      <UtilityDrawer
+        v-model="showUtilityDrawer"
+        :active-panel="activeUtilityPanel"
+        :outline="outline"
+        :outline-font-size="layoutFontSizes.outline"
+        v-model:search-query="searchQuery"
+        :search-result="searchResult"
+        :active-search-index="activeSearchIndex"
+        :draft-layout-font-sizes="draftLayoutFontSizes"
+        @previous-match="goToPreviousMatch"
+        @next-match="goToNextMatch"
+        @update-font-size="setDraftLayoutFontSize"
+        @cancel-settings="closeSettings"
+        @save-settings="saveSettings"
+      />
     </div>
   </div>
 </template>
