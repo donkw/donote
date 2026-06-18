@@ -1093,12 +1093,13 @@ describe('App shell', () => {
     dispatchPasteFiles(wrapper.get('.mock-editor').element, [
       new File(['image'], 'photo.png', { type: 'image/png' }),
       new File(['document'], 'spec.pdf', { type: 'application/pdf' }),
+      new File([], 'empty.txt', { type: 'text/plain' }),
     ])
     await flushPromises()
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     await flushPromises()
 
-    await waitForAssertion(() => expect(SaveAttachment).toHaveBeenCalledTimes(2))
+    await waitForAssertion(() => expect(SaveAttachment).toHaveBeenCalledTimes(3))
     expect(SaveAttachment).toHaveBeenCalledWith(
       'assets/images',
       'photo.png',
@@ -1111,8 +1112,14 @@ describe('App shell', () => {
       'application/pdf',
       expect.any(String),
     )
+    expect(SaveAttachment).toHaveBeenCalledWith(
+      'assets/files',
+      'empty.txt',
+      'text/plain',
+      expect.any(String),
+    )
     expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe(
-      '# Intro\n\n![photo.png](assets/images/photo.png)\n[spec.pdf](assets/files/spec.pdf)',
+      '# Intro\n\n![photo.png](assets/images/photo.png)\n[spec.pdf](assets/files/spec.pdf)\n[empty.txt](assets/files/empty.txt)',
     )
     expect(ListWorkspace).toHaveBeenCalled()
   })

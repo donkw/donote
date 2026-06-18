@@ -160,6 +160,21 @@ func TestWorkspaceServiceSaveAttachment(t *testing.T) {
 		t.Fatal("SaveAttachment(invalid base64) expected error")
 	}
 
+	emptyAttachment, err := service.SaveAttachment("assets/files", "empty.txt", "text/plain", "")
+	if err != nil {
+		t.Fatalf("SaveAttachment(empty) error = %v", err)
+	}
+	if emptyAttachment.Path != "assets/files/empty.txt" {
+		t.Fatalf("expected empty attachment path, got %#v", emptyAttachment)
+	}
+	emptyContent, err := os.ReadFile(filepath.Join(root, "assets", "files", "empty.txt"))
+	if err != nil {
+		t.Fatalf("expected empty attachment to be written: %v", err)
+	}
+	if len(emptyContent) != 0 {
+		t.Fatalf("expected empty attachment content, got %d bytes", len(emptyContent))
+	}
+
 	rootAttachment, err := service.SaveAttachment(".", "root.png", "image/png", payload)
 	if err != nil {
 		t.Fatalf("SaveAttachment(root) error = %v", err)

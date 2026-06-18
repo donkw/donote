@@ -399,11 +399,7 @@ async function handlePasteFiles(files: File[]) {
     return
   }
 
-  const relevantFiles = files.filter((file) => file.size > 0)
-  if (relevantFiles.length === 0) {
-    return
-  }
-  const missingDirectories = getMissingAttachmentDirectories(relevantFiles)
+  const missingDirectories = getMissingAttachmentDirectories(files)
   if (missingDirectories.length > 0) {
     await promptConfigureAttachmentDirectories(missingDirectories)
     return
@@ -411,7 +407,7 @@ async function handlePasteFiles(files: File[]) {
 
   try {
     const markdown = await Promise.all(
-      relevantFiles.map(async (file) => {
+      files.map(async (file) => {
         const directory = isImageFile(file)
           ? attachmentDirectories.value.images
           : attachmentDirectories.value.files
