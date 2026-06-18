@@ -735,6 +735,42 @@ textarea:focus-visible {
   line-height: 1.72;
 }
 
+.milkdown-host-root {
+  position: relative;
+}
+
+.milkdown-editor .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.milkdown-editor .ProseMirror img.donote-resizable-image {
+  cursor: nwse-resize;
+}
+
+.milkdown-editor .ProseMirror img.donote-image-active {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.image-resize-handle {
+  position: absolute;
+  z-index: 8;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 4px;
+  background: var(--accent);
+  box-shadow: var(--shadow-soft);
+  cursor: nwse-resize;
+}
+
+.image-resize-handle[hidden] {
+  display: none;
+}
+
 .milkdown-editor .ProseMirror h1,
 .milkdown-editor .ProseMirror h2,
 .milkdown-editor .ProseMirror h3 {
