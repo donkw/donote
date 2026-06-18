@@ -17,7 +17,6 @@ import {
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
 import { EventsOn } from '../wailsjs/runtime/runtime'
-import AppHeader from './components/AppHeader.vue'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
 import UtilityDrawer from './components/UtilityDrawer.vue'
@@ -113,13 +112,6 @@ const activeSaveState = computed<SaveState>(() => {
   if (activeDocument.value.error) return 'error'
   if (isDocumentDirty(activeDocument.value)) return 'dirty'
   return 'saved'
-})
-const saveStatusText = computed(() => {
-  if (!activeDocument.value) return ''
-  if (activeSaveState.value === 'dirty') return '有未保存更改'
-  if (activeSaveState.value === 'saving') return '正在保存'
-  if (activeSaveState.value === 'error') return '保存失败'
-  return '已保存'
 })
 const activeFilePath = computed(() => activeDocument.value?.path ?? '')
 const layoutFontStyle = computed(() => ({
@@ -828,13 +820,6 @@ function setError(error: unknown) {
 
 <template>
   <div class="app-shell">
-    <AppHeader
-      :save-status-text="saveStatusText"
-      :save-state="activeSaveState"
-      @search="openUtilityPanel('search')"
-      @settings="openUtilityPanel('settings')"
-    />
-
     <div v-if="errorMessage || activeDocument?.error" class="error-banner">
       {{ errorMessage || activeDocument?.error }}
     </div>

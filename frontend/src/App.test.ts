@@ -169,42 +169,19 @@ describe('App shell', () => {
   test('starts with a Chinese empty workspace state', () => {
     const wrapper = mount(App)
 
-    expect(wrapper.text()).toContain('Donote')
+    expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
   })
 
-  test('renders modern Element Plus app chrome', () => {
+  test('renders the editor workspace without a top header', () => {
     const wrapper = mount(App)
 
-    expect(wrapper.get('[data-test="topbar"]').classes()).toContain('app-header')
-    expect(wrapper.get('[data-test="topbar"]').find('[data-test="format-toolbar"]').exists()).toBe(
-      false,
-    )
-    expect(wrapper.get('[data-test="topbar"]').find('[data-test="theme-toggle"]').exists()).toBe(
-      false,
-    )
-    expect(wrapper.get('[data-test="topbar"]').find('[data-test="save-now"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="theme-toggle"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="save-now"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="utility-outline"]').exists()).toBe(true)
-  })
-
-  test('registers native menu actions and cleans them up on unmount', () => {
-    const wrapper = mount(App)
-
-    expect(runtimeMocks.EventsOn).toHaveBeenCalledWith(
-      'menu:open-workspace',
-      expect.any(Function),
-    )
-    expect(runtimeMocks.EventsOn).toHaveBeenCalledWith('menu:create-note', expect.any(Function))
-    expect(runtimeMocks.events.has('menu:open-workspace')).toBe(true)
-    expect(runtimeMocks.events.has('menu:create-note')).toBe(true)
-
-    wrapper.unmount()
-
-    expect(runtimeMocks.events.has('menu:open-workspace')).toBe(false)
-    expect(runtimeMocks.events.has('menu:create-note')).toBe(false)
   })
 
   test('restores the last opened workspace on startup', async () => {
@@ -352,7 +329,7 @@ describe('App shell', () => {
     expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe(
       '# Intro draft',
     )
-    expect(wrapper.text()).toContain('有未保存更改')
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
     expect(SaveMarkdown).not.toHaveBeenCalled()
   })
 
@@ -514,7 +491,7 @@ describe('App shell', () => {
     await wrapper.get('.mock-editor').setValue('# Changed')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('有未保存更改')
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
     await vi.advanceTimersByTimeAsync(1_600)
     expect(SaveMarkdown).not.toHaveBeenCalled()
 
@@ -528,7 +505,7 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(SaveMarkdown).toHaveBeenCalledWith('intro.md', '# Changed')
-    expect(wrapper.text()).toContain('已保存')
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
     vi.useRealTimers()
   })
 

@@ -3,14 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/wailsapp/wails/v2/pkg/menu"
-	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-)
-
-const (
-	menuOpenWorkspaceEvent = "menu:open-workspace"
-	menuCreateNoteEvent    = "menu:create-note"
 )
 
 // App struct
@@ -34,23 +27,6 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	width, height := runtime.WindowGetSize(ctx)
 	_ = saveWindowState(WindowState{Width: width, Height: height})
 	return false
-}
-
-func (a *App) applicationMenu() *menu.Menu {
-	appMenu := menu.NewMenu()
-	fileMenu := appMenu.AddSubmenu("文件")
-	fileMenu.AddText("打开文件夹", keys.CmdOrCtrl("o"), a.emitMenuEvent(menuOpenWorkspaceEvent))
-	fileMenu.AddText("新建笔记", keys.CmdOrCtrl("n"), a.emitMenuEvent(menuCreateNoteEvent))
-	return appMenu
-}
-
-func (a *App) emitMenuEvent(eventName string) menu.Callback {
-	return func(_ *menu.CallbackData) {
-		if a.ctx == nil {
-			return
-		}
-		runtime.EventsEmit(a.ctx, eventName)
-	}
 }
 
 func (a *App) SelectWorkspace() (WorkspaceInfo, error) {

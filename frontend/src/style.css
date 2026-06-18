@@ -21,7 +21,6 @@
   --shadow-soft: 0 18px 44px rgba(31, 41, 55, 0.08);
   --shadow-control: 0 1px 2px rgba(31, 41, 55, 0.08);
   --focus-ring: 0 0 0 3px rgba(20, 184, 166, 0.2);
-  --header-height: 56px;
   --rail-width: 48px;
   --sidebar-width: 286px;
   --sidebar-font-size: 13px;
@@ -135,80 +134,11 @@ textarea:focus-visible {
 
 .app-shell {
   display: grid;
-  grid-template-rows: var(--header-height) auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   width: 100%;
   height: 100vh;
   overflow: hidden;
   background: var(--app-bg);
-}
-
-.app-header,
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: var(--header-height);
-  min-height: var(--header-height);
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface), var(--app-bg) 12%);
-}
-
-.app-chrome {
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.58) inset;
-}
-
-:root[data-theme='dark'] .app-chrome {
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
-}
-
-.app-header__brand,
-.brand {
-  display: flex;
-  align-items: center;
-  flex: 0 0 160px;
-  gap: 9px;
-  min-width: 0;
-}
-
-.brand-mark {
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 800;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent), transparent 72%);
-}
-
-.brand-copy {
-  display: grid;
-  min-width: 0;
-  line-height: 1.15;
-}
-
-.brand-name {
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 750;
-  letter-spacing: 0;
-}
-
-.brand-subtitle {
-  color: var(--text-subtle);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0;
-}
-
-.app-header__spacer,
-.toolbar-spacer {
-  flex: 1 1 auto;
-  min-width: 12px;
 }
 
 .toolbar-group,
@@ -243,11 +173,6 @@ textarea:focus-visible {
   border-radius: 7px;
 }
 
-.window-actions {
-  min-width: 0;
-}
-
-.icon-button.el-button,
 .tool-button.el-button,
 .toolbar-group.el-button-group .el-button {
   width: 30px;
@@ -261,53 +186,19 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
-.icon-button.el-button:hover,
 .tool-button.el-button:hover,
 .toolbar-group.el-button-group .el-button:hover {
   background: var(--surface-muted);
   color: var(--text);
 }
 
-.icon-button.el-button:focus-visible,
 .tool-button.el-button:focus-visible,
 .toolbar-group.el-button-group .el-button:focus-visible {
   box-shadow: var(--focus-ring);
 }
 
-.icon-button.subtle.el-button {
-  color: var(--text-subtle);
-}
-
-.status-pill.save-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  min-width: 84px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.save-status[data-state='dirty'] {
-  color: var(--warning);
-}
-
-.save-status[data-state='saving'] {
-  color: var(--accent-strong);
-}
-
-.save-status[data-state='error'] {
-  color: var(--danger);
-}
-
 .error-banner {
-  grid-row: 2;
+  grid-row: 1;
   padding: 10px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--danger), transparent 64%);
   background: color-mix(in srgb, var(--danger), transparent 90%);
@@ -317,7 +208,7 @@ textarea:focus-visible {
 }
 
 .workspace-layout {
-  grid-row: 3;
+  grid-row: 2;
   display: grid;
   grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr) var(--rail-width);
   min-height: 0;
@@ -740,7 +631,7 @@ textarea:focus-visible {
 
 .milkdown-editor {
   width: 100%;
-  min-height: calc(100vh - var(--header-height) - 142px);
+  min-height: calc(100vh - 142px);
   margin: 0;
   padding: 38px 54px 58px;
   border: 1px solid var(--border);
@@ -754,7 +645,7 @@ textarea:focus-visible {
 }
 
 .milkdown-editor .ProseMirror {
-  min-height: calc(100vh - var(--header-height) - 252px);
+  min-height: calc(100vh - 252px);
   outline: none;
   color: var(--text);
   font-size: var(--editor-font-size, 17px);
@@ -949,11 +840,6 @@ textarea:focus-visible {
 }
 
 @media (max-width: 1100px) {
-  .app-header__brand,
-  .brand {
-    flex-basis: 148px;
-  }
-
   .milkdown-shell {
     padding: 28px 28px 48px;
   }
