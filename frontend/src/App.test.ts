@@ -1300,6 +1300,16 @@ describe('App shell', () => {
 
     const searchInput = wrapper.get('[data-test="search-input"]')
     expect(searchInput.element).toBe(document.activeElement)
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+      }),
+    )
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
     wrapper.unmount()
     host.remove()
   })
@@ -1347,5 +1357,18 @@ describe('App shell', () => {
     await wrapper.get('[data-test="search-previous"]').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('1/3')
+
+    await wrapper.get('[data-test="utility-search"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('searchQuery')).toBe('')
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('activeSearchIndex')).toBe(-1)
+
+    await wrapper.get('[data-test="utility-search"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(true)
+    expect(wrapper.getComponent({ name: 'MilkdownEditor' }).props('searchQuery')).toBe('')
   })
 })

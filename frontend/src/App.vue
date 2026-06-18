@@ -438,12 +438,30 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     void openEditorSearch()
   }
+  if (key === 'escape' && showEditorSearch.value) {
+    event.preventDefault()
+    closeEditorSearch()
+  }
 }
 
 async function openEditorSearch() {
   showEditorSearch.value = true
   await nextTick()
   searchPanel.value?.focus()
+}
+
+function closeEditorSearch() {
+  showEditorSearch.value = false
+  searchQuery.value = ''
+  activeSearchIndex.value = -1
+}
+
+function toggleEditorSearch() {
+  if (showEditorSearch.value) {
+    closeEditorSearch()
+    return
+  }
+  void openEditorSearch()
 }
 
 function switchTheme() {
@@ -900,7 +918,7 @@ function setError(error: unknown) {
         :save-state="activeSaveState"
         :search-open="showEditorSearch"
         @select="toggleUtilityPanel"
-        @search="openEditorSearch"
+        @search="toggleEditorSearch"
         @save="flushSave"
         @toggle-theme="switchTheme"
       />
