@@ -1,5 +1,15 @@
 <template>
-  <div ref="hostRoot" class="milkdown-host-root" @pointerdown.capture="handleHostPointerDown">
+  <div
+    ref="hostRoot"
+    class="milkdown-host-root"
+    @beforeinput.capture="markUserMarkdownInput"
+    @cut.capture="markUserMarkdownInput"
+    @drop.capture="markUserMarkdownInput"
+    @input.capture="markUserMarkdownInput"
+    @keydown.capture="markUserMarkdownInput"
+    @paste.capture="markUserMarkdownInput"
+    @pointerdown.capture="handleHostPointerDown"
+  >
     <Milkdown />
     <button
       ref="resizeHandle"
@@ -30,6 +40,11 @@ import {
   searchHighlightPluginKey,
   type SearchHighlightState,
 } from '../lib/searchHighlight'
+import {
+  normalizeComparableImageSource,
+  resolvedImageSourceCacheKey,
+  restoreResolvedImageSources,
+} from '../lib/markdownImageSources'
 
 type ResolveImageSource = (source: string, activePath: string) => Promise<string>
 
@@ -57,6 +72,7 @@ const hostRoot = ref<HTMLElement | null>(null)
 const resizeHandle = ref<HTMLButtonElement | null>(null)
 let imageObserver: MutationObserver | null = null
 let activeImage: HTMLImageElement | null = null
+let hasUserMarkdownInput = false
 let resizeState: {
   pointerId: number
   startX: number
@@ -77,8 +93,20 @@ const editor = useEditor((root) =>
         createSearchHighlightPlugin(currentSearchHighlightState()),
       ])
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-        lastMarkdown = markdown
-        emit('update:modelValue', markdown)
+        if (!hasUserMarkdownInput) {
+          return
+        }
+        const restoredMarkdown = restoreResolvedImageSources(
+          markdown,
+          lastMarkdown,
+          props.activePath,
+          resolvedImageSourceCache,
+        )
+        if (restoredMarkdown === lastMarkdown) {
+          return
+        }
+        lastMarkdown = restoredMarkdown
+        emit('update:modelValue', restoredMarkdown)
       })
     })
     .use(commonmark)
@@ -150,7 +178,7 @@ async function resolveImageElementSource(image: HTMLImageElement, source: string
   }
   image.dataset.markdownSource = source
   const activePath = props.activePath
-  const cacheKey = `${activePath}\n${source}`
+  const cacheKey = resolvedImageSourceCacheKey(activePath, source)
   const cached = resolvedImageSourceCache.get(cacheKey)
   if (cached) {
     if (image.src !== cached) {
@@ -231,6 +259,24 @@ function handleHostPointerDown(event: PointerEvent) {
     return
   }
   hideImageResizeHandle()
+}
+
+function markUserMarkdownInput(event: Event) {
+  if (event instanceof KeyboardEvent && !isMarkdownEditingKey(event)) {
+    return
+  }
+  hasUserMarkdownInput = true
+}
+
+function isMarkdownEditingKey(event: KeyboardEvent) {
+  const key = event.key.toLowerCase()
+  if (event.ctrlKey || event.metaKey) {
+    return key === 'b' || key === 'i' || key === 'y' || key === 'z'
+  }
+  if (event.altKey) {
+    return false
+  }
+  return event.key.length === 1 || ['backspace', 'delete', 'enter', 'tab'].includes(key)
 }
 
 function selectImageForResize(image: HTMLImageElement) {
@@ -404,15 +450,6 @@ function imageSourceMatches(value: string, source: string) {
   return normalizeComparableImageSource(value) === normalizeComparableImageSource(source)
 }
 
-function normalizeComparableImageSource(value: string) {
-  const trimmed = value.trim()
-  try {
-    return decodeURI(trimmed)
-  } catch {
-    return trimmed
-  }
-}
-
 function imageWidthFromTitle(title: string) {
   const match = title.match(/(?:^|\s)donote-width=(\d{2,5})(?=\s|$)/)
   return match ? normalizeImageWidth(Number(match[1])) : 0
@@ -438,6 +475,7 @@ watch(
   () => props.activePath,
   () => {
     lastMarkdown = props.modelValue
+    hasUserMarkdownInput = false
     editor.get()?.action(replaceAll(props.modelValue, true))
     updateSearchHighlights()
     void resolveWorkspaceImages()
@@ -451,6 +489,7 @@ watch(
       return
     }
     lastMarkdown = value
+    hasUserMarkdownInput = false
     editor.get()?.action(replaceAll(value, true))
     updateSearchHighlights()
     void resolveWorkspaceImages()
