@@ -499,6 +499,7 @@ textarea:focus-visible {
 }
 
 .document-tabs.el-tabs {
+  grid-row: 1;
   min-width: 0;
   min-height: 40px;
   background: color-mix(in srgb, var(--surface), var(--app-bg) 34%);
@@ -588,6 +589,7 @@ textarea:focus-visible {
 }
 
 .editor-surface {
+  grid-row: 3;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
@@ -811,6 +813,7 @@ textarea:focus-visible {
 }
 
 .search-panel {
+  grid-row: 2;
   position: sticky;
   top: 0;
   z-index: 10;

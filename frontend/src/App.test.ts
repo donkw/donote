@@ -182,6 +182,8 @@ describe('App shell', () => {
     expect(wrapper.find('[data-test="theme-toggle"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="save-now"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="utility-outline"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="utility-search"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
   })
 
   test('restores the last opened workspace on startup', async () => {
@@ -1174,7 +1176,7 @@ describe('App shell', () => {
     await wrapper.get('[data-test="utility-settings"]').trigger('click')
 
     expect(wrapper.find('[data-test="settings-page"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.find('.utility-drawer [data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('布局字体大小')
     await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
@@ -1283,8 +1285,7 @@ describe('App shell', () => {
     document.body.appendChild(host)
     const wrapper = mount(App, { attachTo: host })
 
-    const searchInput = wrapper.get('[data-test="search-input"]')
-    expect(searchInput.element).not.toBe(document.activeElement)
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
@@ -1295,6 +1296,7 @@ describe('App shell', () => {
     )
     await flushPromises()
 
+    const searchInput = wrapper.get('[data-test="search-input"]')
     expect(searchInput.element).toBe(document.activeElement)
     wrapper.unmount()
     host.remove()
@@ -1324,7 +1326,10 @@ describe('App shell', () => {
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('[data-test="utility-search"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
+    await wrapper.get('[data-test="utility-search"]').trigger('click')
+    await flushPromises()
+
     await wrapper.get('[data-test="search-input"]').setValue('Intro')
     await flushPromises()
 

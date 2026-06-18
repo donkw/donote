@@ -80,6 +80,7 @@ const sidebarWidth = ref(getInitialSidebarWidth())
 const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 const menuEventCleanups: Array<() => void> = []
+const showEditorSearch = ref(false)
 const searchPanel = ref<{ focus: () => void } | null>(null)
 
 let sidebarResizeStartX = 0
@@ -435,11 +436,12 @@ function handleKeydown(event: KeyboardEvent) {
   }
   if ((event.ctrlKey || event.metaKey) && key === 'f') {
     event.preventDefault()
-    void focusEditorSearch()
+    void openEditorSearch()
   }
 }
 
-async function focusEditorSearch() {
+async function openEditorSearch() {
+  showEditorSearch.value = true
   await nextTick()
   searchPanel.value?.focus()
 }
@@ -861,7 +863,15 @@ function setError(error: unknown) {
       />
 
       <main class="editor-pane">
+        <DocumentTabs
+          :documents="openDocuments"
+          :active-path="activeFilePath"
+          @update:active-path="switchDocument"
+          @close="closeDocument"
+        />
+
         <SearchPanel
+          v-if="showEditorSearch"
           ref="searchPanel"
           class="editor-search-panel"
           :query="searchQuery"
@@ -870,13 +880,6 @@ function setError(error: unknown) {
           @update:query="searchQuery = $event"
           @previous="goToPreviousMatch"
           @next="goToNextMatch"
-        />
-
-        <DocumentTabs
-          :documents="openDocuments"
-          :active-path="activeFilePath"
-          @update:active-path="switchDocument"
-          @close="closeDocument"
         />
 
         <EditorSurface
@@ -893,7 +896,9 @@ function setError(error: unknown) {
         :drawer-open="showUtilityDrawer"
         :theme="theme"
         :save-state="activeSaveState"
+        :search-open="showEditorSearch"
         @select="toggleUtilityPanel"
+        @search="openEditorSearch"
         @save="flushSave"
         @toggle-theme="switchTheme"
       />

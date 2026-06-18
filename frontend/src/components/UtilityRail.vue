@@ -1,26 +1,50 @@
 <script setup lang="ts">
-import { FileText, ListTree, Moon, Settings, Sun } from '@lucide/vue'
+import { FileText, ListTree, Moon, Search, Settings, Sun } from '@lucide/vue'
 import { ElButton, ElTooltip } from 'element-plus'
 import type { ThemeMode } from '../lib/theme'
 import type { SaveState, UtilityPanel } from '../types/app'
 
-defineProps<{
+const props = defineProps<{
   activePanel: UtilityPanel
   drawerOpen: boolean
+  searchOpen: boolean
   theme: ThemeMode
   saveState: SaveState
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'select', panel: UtilityPanel): void
+  (event: 'search'): void
   (event: 'save'): void
   (event: 'toggle-theme'): void
 }>()
 
-const tools: Array<{ key: UtilityPanel; label: string; icon: typeof ListTree }> = [
+type UtilityTool = {
+  key: UtilityPanel | 'search'
+  label: string
+  icon: typeof ListTree
+}
+
+const tools: UtilityTool[] = [
   { key: 'outline', label: '大纲', icon: ListTree },
+  { key: 'search', label: '搜索', icon: Search },
   { key: 'settings', label: '设置', icon: Settings },
 ]
+
+function toolButtonType(tool: UtilityTool) {
+  if (tool.key === 'search') {
+    return props.searchOpen ? 'primary' : 'default'
+  }
+  return props.drawerOpen && props.activePanel === tool.key ? 'primary' : 'default'
+}
+
+function selectTool(tool: UtilityTool) {
+  if (tool.key === 'search') {
+    emit('search')
+    return
+  }
+  emit('select', tool.key)
+}
 </script>
 
 <template>
@@ -60,8 +84,8 @@ const tools: Array<{ key: UtilityPanel; label: string; icon: typeof ListTree }> 
         :aria-label="tool.label"
         :title="tool.label"
         circle
-        :type="drawerOpen && activePanel === tool.key ? 'primary' : 'default'"
-        @click="$emit('select', tool.key)"
+        :type="toolButtonType(tool)"
+        @click="selectTool(tool)"
       >
         <component :is="tool.icon" :size="18" />
       </ElButton>
