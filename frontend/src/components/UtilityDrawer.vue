@@ -30,6 +30,7 @@ const emit = defineEmits<{
   (event: 'update-font-size', area: LayoutFontSizeArea, value: number): void
   (event: 'update-editor-width', value: number): void
   (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
+  (event: 'select-attachment-directory', key: keyof AttachmentDirectories): void
   (event: 'cancel-settings'): void
   (event: 'save-settings'): void
 }>()
@@ -50,6 +51,10 @@ function emitEditorWidth(value: number) {
 
 function emitAttachmentDirectory(key: keyof AttachmentDirectories, value: string) {
   emit('update-attachment-directory', key, value)
+}
+
+function emitSelectAttachmentDirectory(key: keyof AttachmentDirectories) {
+  emit('select-attachment-directory', key)
 }
 </script>
 
@@ -86,6 +91,7 @@ function emitAttachmentDirectory(key: keyof AttachmentDirectories, value: string
       @update-font-size="emitFontSize"
       @update-editor-width="emitEditorWidth"
       @update-attachment-directory="emitAttachmentDirectory"
+      @select-attachment-directory="emitSelectAttachmentDirectory"
       @cancel="$emit('cancel-settings')"
       @save="$emit('save-settings')"
     />

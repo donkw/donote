@@ -139,6 +139,30 @@ func (a *App) SaveAttachment(directoryRelativePath string, originalName string, 
 	return service.SaveAttachment(directoryRelativePath, originalName, mimeType, dataBase64)
 }
 
+func (a *App) SelectAttachmentDirectory(kind string) (string, error) {
+	service, err := a.requireWorkspace()
+	if err != nil {
+		return "", err
+	}
+
+	title := "选择附件存储目录"
+	switch kind {
+	case "images":
+		title = "选择图片存储目录"
+	case "files":
+		title = "选择文件存储目录"
+	}
+	selectedPath, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:                title,
+		DefaultDirectory:     service.RootPath(),
+		CanCreateDirectories: true,
+	})
+	if err != nil || selectedPath == "" {
+		return selectedPath, err
+	}
+	return service.RelativeDirectoryPath(selectedPath)
+}
+
 func (a *App) requireWorkspace() (*WorkspaceService, error) {
 	if a.workspace == nil {
 		return nil, ErrWorkspaceNotSelected

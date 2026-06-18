@@ -245,7 +245,7 @@ func (s *WorkspaceService) DeletePath(relativePath string) error {
 }
 
 func (s *WorkspaceService) SaveAttachment(directoryRelativePath string, originalName string, mimeType string, dataBase64 string) (Attachment, error) {
-	directoryPath, cleanDirectory, err := s.resolvePath(directoryRelativePath, false)
+	directoryPath, cleanDirectory, err := s.resolvePath(directoryRelativePath, true)
 	if err != nil {
 		return Attachment{}, err
 	}
@@ -273,6 +273,36 @@ func (s *WorkspaceService) SaveAttachment(directoryRelativePath string, original
 		Name: finalName,
 		Path: joinRelative(cleanDirectory, finalName),
 	}, nil
+}
+
+func (s *WorkspaceService) RelativeDirectoryPath(directoryPath string) (string, error) {
+	trimmed := strings.TrimSpace(directoryPath)
+	if trimmed == "" {
+		return "", errors.New("请选择附件存储目录")
+	}
+	absolute, err := filepath.Abs(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("无法解析附件目录: %w", err)
+	}
+	info, err := os.Stat(absolute)
+	if err != nil {
+		return "", fmt.Errorf("附件目录不存在: %w", err)
+	}
+	if !info.IsDir() {
+		return "", errors.New("附件存储位置必须是文件夹")
+	}
+
+	relative, err := filepath.Rel(s.root, absolute)
+	if err != nil {
+		return "", fmt.Errorf("无法校验附件目录: %w", err)
+	}
+	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", errors.New("附件目录必须位于当前工作区内")
+	}
+	if relative == "." {
+		return ".", nil
+	}
+	return filepath.ToSlash(relative), nil
 }
 
 func (s *WorkspaceService) scanDir(relative string) ([]FileNode, error) {

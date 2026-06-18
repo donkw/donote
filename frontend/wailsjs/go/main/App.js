@@ -38,6 +38,10 @@ export function SaveMarkdown(arg1, arg2) {
   return window['go']['main']['App']['SaveMarkdown'](arg1, arg2);
 }
 
+export function SelectAttachmentDirectory(arg1) {
+  return window['go']['main']['App']['SelectAttachmentDirectory'](arg1);
+}
+
 export function SelectWorkspace() {
   return window['go']['main']['App']['SelectWorkspace']();
 }

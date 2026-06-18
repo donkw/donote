@@ -159,6 +159,47 @@ func TestWorkspaceServiceSaveAttachment(t *testing.T) {
 	if _, err := service.SaveAttachment("assets", "bad.bin", "", "not-base64"); err == nil {
 		t.Fatal("SaveAttachment(invalid base64) expected error")
 	}
+
+	rootAttachment, err := service.SaveAttachment(".", "root.png", "image/png", payload)
+	if err != nil {
+		t.Fatalf("SaveAttachment(root) error = %v", err)
+	}
+	if rootAttachment.Path != "root.png" {
+		t.Fatalf("expected root attachment path, got %#v", rootAttachment)
+	}
+}
+
+func TestWorkspaceServiceRelativeDirectoryPath(t *testing.T) {
+	root := t.TempDir()
+	mustMkdir(t, filepath.Join(root, "assets", "images"))
+	mustWriteFile(t, filepath.Join(root, "note.md"), "# Note")
+	service, err := NewWorkspaceService(root)
+	if err != nil {
+		t.Fatalf("NewWorkspaceService() error = %v", err)
+	}
+
+	relative, err := service.RelativeDirectoryPath(filepath.Join(root, "assets", "images"))
+	if err != nil {
+		t.Fatalf("RelativeDirectoryPath() error = %v", err)
+	}
+	if relative != "assets/images" {
+		t.Fatalf("expected assets/images, got %q", relative)
+	}
+
+	rootRelative, err := service.RelativeDirectoryPath(root)
+	if err != nil {
+		t.Fatalf("RelativeDirectoryPath(root) error = %v", err)
+	}
+	if rootRelative != "." {
+		t.Fatalf("expected root directory to become '.', got %q", rootRelative)
+	}
+
+	if _, err := service.RelativeDirectoryPath(filepath.Join(root, "note.md")); err == nil {
+		t.Fatal("RelativeDirectoryPath(file) expected error")
+	}
+	if _, err := service.RelativeDirectoryPath(filepath.Dir(root)); err == nil {
+		t.Fatal("RelativeDirectoryPath(outside workspace) expected error")
+	}
 }
 
 func TestWorkspaceServiceRejectsUnsafePathsAndNonMarkdownWrites(t *testing.T) {

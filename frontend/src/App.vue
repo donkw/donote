@@ -11,6 +11,7 @@ import {
   RenamePath,
   SaveAttachment,
   SaveMarkdown,
+  SelectAttachmentDirectory,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
@@ -535,6 +536,18 @@ function setDraftAttachmentDirectory(key: keyof AttachmentDirectories, value: st
   }
 }
 
+async function selectDraftAttachmentDirectory(key: keyof AttachmentDirectories) {
+  try {
+    const selected = await SelectAttachmentDirectory(key)
+    if (!selected) {
+      return
+    }
+    setDraftAttachmentDirectory(key, selected)
+  } catch (error) {
+    setError(error)
+  }
+}
+
 function saveSettings() {
   layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
@@ -896,6 +909,7 @@ function setError(error: unknown) {
         @update-font-size="setDraftLayoutFontSize"
         @update-editor-width="setDraftEditorWidth"
         @update-attachment-directory="setDraftAttachmentDirectory"
+        @select-attachment-directory="selectDraftAttachmentDirectory"
         @cancel-settings="closeSettings"
         @save-settings="saveSettings"
       />

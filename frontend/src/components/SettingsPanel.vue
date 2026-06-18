@@ -18,6 +18,7 @@ defineEmits<{
   (event: 'update-font-size', area: LayoutFontSizeArea, value: number): void
   (event: 'update-editor-width', value: number): void
   (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
+  (event: 'select-attachment-directory', key: keyof AttachmentDirectories): void
   (event: 'cancel'): void
   (event: 'save'): void
 }>()
@@ -49,7 +50,16 @@ defineEmits<{
           :model-value="attachmentDirectories.images"
           placeholder="例如 assets/images"
           @update:model-value="$emit('update-attachment-directory', 'images', $event)"
-        />
+        >
+          <template #append>
+            <ElButton
+              data-test="select-attachment-image-dir"
+              @click="$emit('select-attachment-directory', 'images')"
+            >
+              选择
+            </ElButton>
+          </template>
+        </ElInput>
       </ElFormItem>
       <ElFormItem label="文件目录">
         <ElInput
@@ -57,7 +67,16 @@ defineEmits<{
           :model-value="attachmentDirectories.files"
           placeholder="例如 assets/files"
           @update:model-value="$emit('update-attachment-directory', 'files', $event)"
-        />
+        >
+          <template #append>
+            <ElButton
+              data-test="select-attachment-file-dir"
+              @click="$emit('select-attachment-directory', 'files')"
+            >
+              选择
+            </ElButton>
+          </template>
+        </ElInput>
       </ElFormItem>
     </ElForm>
 

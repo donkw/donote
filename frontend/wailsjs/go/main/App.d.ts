@@ -20,4 +20,6 @@ export function SaveAttachment(arg1:string,arg2:string,arg3:string,arg4:string):
 
 export function SaveMarkdown(arg1:string,arg2:string):Promise<main.SaveResult>;
 
+export function SelectAttachmentDirectory(arg1:string):Promise<string>;
+
 export function SelectWorkspace():Promise<main.WorkspaceInfo>;

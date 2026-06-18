@@ -14,6 +14,7 @@ import {
   RenamePath,
   SaveAttachment,
   SaveMarkdown,
+  SelectAttachmentDirectory,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
 
@@ -46,6 +47,7 @@ vi.mock('../wailsjs/go/main/App', () => ({
   RenamePath: vi.fn(),
   DeletePath: vi.fn(),
   SaveAttachment: vi.fn(),
+  SelectAttachmentDirectory: vi.fn(),
 }))
 
 vi.mock('../wailsjs/runtime/runtime', () => ({
@@ -1142,6 +1144,44 @@ describe('App shell', () => {
       '{"images":"assets/images","files":"assets/files"}',
     )
     expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
+  })
+
+  test('selects attachment directories through the native directory dialog', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [],
+    } as any)
+    vi.mocked(SelectAttachmentDirectory)
+      .mockResolvedValueOnce('assets/images')
+      .mockResolvedValueOnce('assets/files')
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+
+    await wrapper.get('[data-test="utility-settings"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="select-attachment-image-dir"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="select-attachment-file-dir"]').trigger('click')
+    await flushPromises()
+
+    expect(SelectAttachmentDirectory).toHaveBeenNthCalledWith(1, 'images')
+    expect(SelectAttachmentDirectory).toHaveBeenNthCalledWith(2, 'files')
+    expect((wrapper.get('[data-test="attachment-image-dir"]').element as HTMLInputElement).value).toBe(
+      'assets/images',
+    )
+    expect((wrapper.get('[data-test="attachment-file-dir"]').element as HTMLInputElement).value).toBe(
+      'assets/files',
+    )
+
+    await wrapper.get('[data-test="settings-save"]').trigger('click')
+
+    expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(
+      '{"images":"assets/images","files":"assets/files"}',
+    )
   })
 
   test('resizes the sidebar by dragging the divider and stores the width', async () => {
