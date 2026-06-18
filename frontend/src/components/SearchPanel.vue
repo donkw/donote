@@ -45,15 +45,17 @@ defineExpose({ focus })
       </span>
       <ElButton data-test="search-previous" @click="$emit('previous')">上一个</ElButton>
       <ElButton data-test="search-next" @click="$emit('next')">下一个</ElButton>
-      <ElButton
-        data-test="search-close"
-        aria-label="关闭搜索"
-        title="关闭搜索"
-        circle
-        @click="$emit('close')"
-      >
-        <X :size="16" />
-      </ElButton>
     </div>
+    <ElButton
+      class="search-close-button"
+      data-test="search-close"
+      aria-label="关闭搜索"
+      title="关闭搜索"
+      circle
+      text
+      @click="$emit('close')"
+    >
+      <X :size="16" />
+    </ElButton>
   </div>
 </template>

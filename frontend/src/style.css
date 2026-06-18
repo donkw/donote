@@ -850,6 +850,22 @@ textarea:focus-visible {
   gap: 8px;
 }
 
+.search-close-button.el-button {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  margin-left: auto;
+  border-radius: 8px;
+  color: var(--text-subtle);
+}
+
+.search-close-button.el-button:hover,
+.search-close-button.el-button:focus-visible {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
 .search-count {
   display: inline-flex;
   align-items: center;

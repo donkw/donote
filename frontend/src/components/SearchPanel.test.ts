@@ -19,6 +19,13 @@ describe('SearchPanel', () => {
     })
 
     expect(wrapper.get('[data-test="search-close"]').attributes('aria-label')).toBe('关闭搜索')
+    expect(wrapper.find('.search-actions [data-test="search-close"]').exists()).toBe(false)
+    expect(
+      wrapper
+        .findAll('.search-panel > *')
+        .at(-1)
+        ?.attributes('data-test'),
+    ).toBe('search-close')
 
     await wrapper.get('[data-test="search-close"]').trigger('click')
 
