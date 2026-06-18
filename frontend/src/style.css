@@ -871,6 +871,13 @@ textarea:focus-visible {
   border-radius: 8px;
 }
 
+.utility-rail__divider {
+  width: 22px;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--border);
+}
+
 .utility-panel-scroll {
   height: 100%;
 }

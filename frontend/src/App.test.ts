@@ -180,7 +180,13 @@ describe('App shell', () => {
     expect(wrapper.get('[data-test="topbar"]').find('[data-test="format-toolbar"]').exists()).toBe(
       false,
     )
+    expect(wrapper.get('[data-test="topbar"]').find('[data-test="theme-toggle"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-test="topbar"]').find('[data-test="save-now"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="theme-toggle"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="save-now"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="utility-outline"]').exists()).toBe(true)
   })
 

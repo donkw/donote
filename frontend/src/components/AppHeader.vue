@@ -1,17 +1,9 @@
 <script setup lang="ts">
-import {
-  FileText,
-  Moon,
-  Search,
-  Settings,
-  Sun,
-} from '@lucide/vue'
+import { Search, Settings } from '@lucide/vue'
 import { ElButton, ElTag, ElTooltip } from 'element-plus'
 import type { SaveState } from '../types/app'
-import type { ThemeMode } from '../lib/theme'
 
 defineProps<{
-  theme: ThemeMode
   saveStatusText: string
   saveState: SaveState
 }>()
@@ -19,8 +11,6 @@ defineProps<{
 defineEmits<{
   (event: 'search'): void
   (event: 'settings'): void
-  (event: 'save'): void
-  (event: 'toggle-theme'): void
 }>()
 </script>
 
@@ -51,20 +41,9 @@ defineEmits<{
           <Search :size="18" />
         </ElButton>
       </ElTooltip>
-      <ElTooltip content="立即保存" placement="bottom">
-        <ElButton class="icon-button" data-test="save-now" circle @click="$emit('save')">
-          <FileText :size="18" />
-        </ElButton>
-      </ElTooltip>
       <ElTooltip content="设置" placement="bottom">
         <ElButton class="icon-button" data-test="settings-toggle" circle @click="$emit('settings')">
           <Settings :size="18" />
-        </ElButton>
-      </ElTooltip>
-      <ElTooltip :content="theme === 'dark' ? '切换浅色' : '切换深色'" placement="bottom">
-        <ElButton class="icon-button" data-test="theme-toggle" circle @click="$emit('toggle-theme')">
-          <Sun v-if="theme === 'dark'" :size="18" />
-          <Moon v-else :size="18" />
         </ElButton>
       </ElTooltip>
     </div>

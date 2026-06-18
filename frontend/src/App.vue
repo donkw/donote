@@ -829,13 +829,10 @@ function setError(error: unknown) {
 <template>
   <div class="app-shell">
     <AppHeader
-      :theme="theme"
       :save-status-text="saveStatusText"
       :save-state="activeSaveState"
       @search="openUtilityPanel('search')"
       @settings="openUtilityPanel('settings')"
-      @save="flushSave"
-      @toggle-theme="switchTheme"
     />
 
     <div v-if="errorMessage || activeDocument?.error" class="error-banner">
@@ -891,7 +888,11 @@ function setError(error: unknown) {
       <UtilityRail
         :active-panel="activeUtilityPanel"
         :drawer-open="showUtilityDrawer"
+        :theme="theme"
+        :save-state="activeSaveState"
         @select="toggleUtilityPanel"
+        @save="flushSave"
+        @toggle-theme="switchTheme"
       />
       <UtilityDrawer
         v-model="showUtilityDrawer"
