@@ -20,10 +20,6 @@ defineEmits<{
   <section class="editor-surface">
     <template v-if="document">
       <div class="document-toolbar">
-        <div class="document-heading">
-          <p class="document-label">当前笔记</p>
-          <h1>{{ document.name }}</h1>
-        </div>
         <div class="document-actions">
           <ElTooltip content="重命名" placement="bottom">
             <ElButton circle @click="$emit('rename')">

@@ -33,7 +33,7 @@ const document = {
 }
 
 describe('EditorSurface', () => {
-  test('renders the document title and emits rename and delete actions', async () => {
+  test('hides the editor heading text and emits rename and delete actions', async () => {
     const wrapper = mount(EditorSurface, {
       props: {
         document,
@@ -41,8 +41,11 @@ describe('EditorSurface', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('当前笔记')
-    expect(wrapper.text()).toContain('draft.md')
+    expect(wrapper.find('.document-heading').exists()).toBe(false)
+    expect(wrapper.find('.document-label').exists()).toBe(false)
+    expect(wrapper.find('h1').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('当前笔记')
+    expect(wrapper.text()).not.toContain('draft.md')
 
     const buttons = wrapper.findAll('button')
     await buttons[0].trigger('click')
