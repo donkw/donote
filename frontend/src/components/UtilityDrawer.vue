@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ElDrawer } from 'element-plus'
+import type { AttachmentDirectories } from '../lib/attachmentDirectories'
 import type { LayoutFontSizeArea, LayoutFontSizes } from '../lib/layoutFontSizes'
 import type { OutlineItem } from '../lib/outline'
 import type { SearchResult } from '../lib/search'
@@ -18,6 +19,7 @@ const props = defineProps<{
   activeSearchIndex: number
   draftLayoutFontSizes: LayoutFontSizes
   draftEditorWidth: number
+  draftAttachmentDirectories: AttachmentDirectories
 }>()
 
 const emit = defineEmits<{
@@ -27,6 +29,7 @@ const emit = defineEmits<{
   (event: 'next-match'): void
   (event: 'update-font-size', area: LayoutFontSizeArea, value: number): void
   (event: 'update-editor-width', value: number): void
+  (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
   (event: 'cancel-settings'): void
   (event: 'save-settings'): void
 }>()
@@ -43,6 +46,10 @@ function emitFontSize(area: LayoutFontSizeArea, value: number) {
 
 function emitEditorWidth(value: number) {
   emit('update-editor-width', value)
+}
+
+function emitAttachmentDirectory(key: keyof AttachmentDirectories, value: string) {
+  emit('update-attachment-directory', key, value)
 }
 </script>
 
@@ -75,8 +82,10 @@ function emitEditorWidth(value: number) {
       v-else
       :model-value="draftLayoutFontSizes"
       :editor-width="draftEditorWidth"
+      :attachment-directories="draftAttachmentDirectories"
       @update-font-size="emitFontSize"
       @update-editor-width="emitEditorWidth"
+      @update-attachment-directory="emitAttachmentDirectory"
       @cancel="$emit('cancel-settings')"
       @save="$emit('save-settings')"
     />

@@ -1,6 +1,6 @@
 <template>
   <MilkdownProvider>
-    <div class="milkdown-shell">
+    <div class="milkdown-shell" @paste.capture="handlePaste">
       <div class="milkdown-editor">
         <MilkdownHost :active-path="activePath" :model-value="modelValue" @update:model-value="emitUpdate" />
       </div>
@@ -19,9 +19,45 @@ defineProps<{
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
+  (event: 'paste-files', files: File[]): void
 }>()
 
 function emitUpdate(value: string) {
   emit('update:modelValue', value)
+}
+
+function handlePaste(event: ClipboardEvent) {
+  const files = collectClipboardFiles(event)
+  if (files.length === 0) {
+    return
+  }
+  event.preventDefault()
+  emit('paste-files', files)
+}
+
+function collectClipboardFiles(event: ClipboardEvent): File[] {
+  const clipboardData = event.clipboardData
+  if (!clipboardData) {
+    return []
+  }
+
+  const files = new Map<string, File>()
+  Array.from(clipboardData.files ?? []).forEach((file) => {
+    files.set(fileKey(file), file)
+  })
+  Array.from(clipboardData.items ?? []).forEach((item) => {
+    if (item.kind !== 'file') {
+      return
+    }
+    const file = item.getAsFile()
+    if (file) {
+      files.set(fileKey(file), file)
+    }
+  })
+  return [...files.values()]
+}
+
+function fileKey(file: File) {
+  return `${file.name}:${file.type}:${file.size}:${file.lastModified}`
 }
 </script>

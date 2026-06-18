@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"testing"
@@ -115,6 +116,48 @@ func TestWorkspaceServiceCreateFolder(t *testing.T) {
 	}
 	if _, err := service.CreateFolder("../escape", "notes"); err == nil {
 		t.Fatal("CreateFolder(unsafe parent) expected error")
+	}
+}
+
+func TestWorkspaceServiceSaveAttachment(t *testing.T) {
+	root := t.TempDir()
+	service, err := NewWorkspaceService(root)
+	if err != nil {
+		t.Fatalf("NewWorkspaceService() error = %v", err)
+	}
+
+	payload := base64.StdEncoding.EncodeToString([]byte("image-bytes"))
+	created, err := service.SaveAttachment("assets/images", "photo.png", "image/png", payload)
+	if err != nil {
+		t.Fatalf("SaveAttachment() error = %v", err)
+	}
+	if created.Name != "photo.png" || created.Path != "assets/images/photo.png" {
+		t.Fatalf("unexpected attachment: %#v", created)
+	}
+	content, err := os.ReadFile(filepath.Join(root, "assets", "images", "photo.png"))
+	if err != nil {
+		t.Fatalf("expected attachment to be written: %v", err)
+	}
+	if string(content) != "image-bytes" {
+		t.Fatalf("unexpected attachment content: %q", string(content))
+	}
+
+	duplicate, err := service.SaveAttachment("assets/images", "photo.png", "image/png", payload)
+	if err != nil {
+		t.Fatalf("SaveAttachment(duplicate) error = %v", err)
+	}
+	if duplicate.Path != "assets/images/photo-1.png" {
+		t.Fatalf("expected duplicate name to get suffix, got %#v", duplicate)
+	}
+
+	if _, err := service.SaveAttachment("../outside", "photo.png", "image/png", payload); err == nil {
+		t.Fatal("SaveAttachment(unsafe directory) expected error")
+	}
+	if _, err := service.SaveAttachment("assets", "../escape.png", "image/png", payload); err == nil {
+		t.Fatal("SaveAttachment(unsafe name) expected error")
+	}
+	if _, err := service.SaveAttachment("assets", "bad.bin", "", "not-base64"); err == nil {
+		t.Fatal("SaveAttachment(invalid base64) expected error")
 	}
 }
 

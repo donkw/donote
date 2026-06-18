@@ -12,6 +12,7 @@ import {
   OpenWorkspace,
   ReadMarkdown,
   RenamePath,
+  SaveAttachment,
   SaveMarkdown,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -44,6 +45,7 @@ vi.mock('../wailsjs/go/main/App', () => ({
   CreateFolder: vi.fn(),
   RenamePath: vi.fn(),
   DeletePath: vi.fn(),
+  SaveAttachment: vi.fn(),
 }))
 
 vi.mock('../wailsjs/runtime/runtime', () => ({
@@ -74,7 +76,7 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
       modelValue: { type: String, required: true },
       activePath: { type: String, default: '' },
     },
-    emits: ['update:modelValue'],
+    emits: ['update:modelValue', 'paste-files'],
     setup(props, { emit }) {
       onMounted(() => {
         if (emitInitialMarkdown) {
@@ -85,9 +87,14 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
           }, 0)
         }
       })
+      function handlePaste(event: ClipboardEvent) {
+        emit('paste-files', Array.from(event.clipboardData?.files ?? []))
+      }
+
+      return { handlePaste }
     },
     template:
-      '<textarea class="mock-editor" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+      '<textarea class="mock-editor" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @paste="handlePaste" />',
   }),
 }))
 
@@ -105,6 +112,21 @@ function dispatchPointerEvent(
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'clientX', { value: options.clientX })
   Object.defineProperty(event, 'button', { value: options.button ?? 0 })
+  target.dispatchEvent(event)
+}
+
+function dispatchPasteFiles(target: EventTarget, files: File[]) {
+  const event = new Event('paste', { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'clipboardData', {
+    value: {
+      files,
+      items: files.map((file) => ({
+        kind: 'file',
+        type: file.type,
+        getAsFile: () => file,
+      })),
+    },
+  })
   target.dispatchEvent(event)
 }
 
@@ -967,6 +989,113 @@ describe('App shell', () => {
     expect(ElMessage.error).toHaveBeenCalledWith('无法读取笔记')
   })
 
+  test('prompts the user to configure attachment directories before pasted files are saved', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    dispatchPasteFiles(wrapper.get('.mock-editor').element, [
+      new File(['image'], 'photo.png', { type: 'image/png' }),
+    ])
+    await flushPromises()
+
+    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
+      '粘贴图片或文件前，请先在设置中配置图片存储目录。',
+      '未配置附件目录',
+      expect.objectContaining({
+        confirmButtonText: '去设置',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }),
+    )
+    expect(SaveAttachment).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-test="attachment-image-dir"]').exists()).toBe(true)
+  })
+
+  test('saves pasted images and files to configured directories and inserts markdown links', async () => {
+    window.localStorage.setItem(
+      'donote.attachmentDirectories',
+      '{"images":"assets/images","files":"assets/files"}',
+    )
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+    vi.mocked(SaveAttachment).mockImplementation(async (directory, name) => ({
+      name,
+      path: `${directory}/${name}`,
+    }) as any)
+    vi.mocked(ListWorkspace).mockResolvedValue([
+      {
+        name: 'intro.md',
+        path: 'intro.md',
+        type: 'file',
+      } as any,
+    ])
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    dispatchPasteFiles(wrapper.get('.mock-editor').element, [
+      new File(['image'], 'photo.png', { type: 'image/png' }),
+      new File(['document'], 'spec.pdf', { type: 'application/pdf' }),
+    ])
+    await flushPromises()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    await flushPromises()
+
+    expect(SaveAttachment).toHaveBeenCalledWith(
+      'assets/images',
+      'photo.png',
+      'image/png',
+      expect.any(String),
+    )
+    expect(SaveAttachment).toHaveBeenCalledWith(
+      'assets/files',
+      'spec.pdf',
+      'application/pdf',
+      expect.any(String),
+    )
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe(
+      '# Intro\n\n![photo.png](assets/images/photo.png)\n[spec.pdf](assets/files/spec.pdf)',
+    )
+    expect(ListWorkspace).toHaveBeenCalled()
+  })
+
   test('applies layout settings only after saving the settings dialog', async () => {
     const wrapper = mount(App)
 
@@ -986,6 +1115,8 @@ describe('App shell', () => {
     await wrapper.get('[data-test="font-size-editor"] input').setValue(19)
     await wrapper.get('[data-test="font-size-outline"] input').setValue(14)
     await wrapper.get('[data-test="editor-width"] input').setValue(1100)
+    await wrapper.get('[data-test="attachment-image-dir"]').setValue('assets/images')
+    await wrapper.get('[data-test="attachment-file-dir"]').setValue('assets/files')
 
     const stagedStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
     expect(stagedStyle).toContain('--sidebar-font-size: 13px')
@@ -994,6 +1125,7 @@ describe('App shell', () => {
     expect(stagedStyle).toContain('--editor-content-width: 900px')
     expect(window.localStorage.getItem('donote.layoutFontSizes')).toBeNull()
     expect(window.localStorage.getItem('donote.editorWidth')).toBeNull()
+    expect(window.localStorage.getItem('donote.attachmentDirectories')).toBeNull()
 
     await wrapper.get('[data-test="settings-save"]').trigger('click')
 
@@ -1006,6 +1138,9 @@ describe('App shell', () => {
       '{"sidebar":12,"editor":19,"outline":14}',
     )
     expect(window.localStorage.getItem('donote.editorWidth')).toBe('1100')
+    expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(
+      '{"images":"assets/images","files":"assets/files"}',
+    )
     expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
   })
 

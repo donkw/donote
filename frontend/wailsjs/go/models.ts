@@ -1,14 +1,28 @@
 export namespace main {
-	
+
+	export class Attachment {
+	    name: string;
+	    path: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Attachment(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	    }
+	}
 	export class Document {
 	    path: string;
 	    name: string;
 	    content: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Document(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
@@ -21,11 +35,11 @@ export namespace main {
 	    path: string;
 	    type: string;
 	    children?: FileNode[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new FileNode(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -33,7 +47,7 @@ export namespace main {
 	        this.type = source["type"];
 	        this.children = this.convertValues(source["children"], FileNode);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -55,11 +69,11 @@ export namespace main {
 	export class SaveResult {
 	    path: string;
 	    savedAt: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SaveResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
@@ -70,18 +84,18 @@ export namespace main {
 	    rootPath: string;
 	    name: string;
 	    tree: FileNode[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceInfo(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.rootPath = source["rootPath"];
 	        this.name = source["name"];
 	        this.tree = this.convertValues(source["tree"], FileNode);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;

@@ -9,6 +9,7 @@ import {
   OpenWorkspace,
   ReadMarkdown,
   RenamePath,
+  SaveAttachment,
   SaveMarkdown,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -20,6 +21,11 @@ import EditorSurface from './components/EditorSurface.vue'
 import UtilityDrawer from './components/UtilityDrawer.vue'
 import UtilityRail from './components/UtilityRail.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
+import {
+  getInitialAttachmentDirectories,
+  saveAttachmentDirectories,
+  type AttachmentDirectories,
+} from './lib/attachmentDirectories'
 import {
   getInitialEditorWidth,
   normalizeEditorWidth,
@@ -66,6 +72,8 @@ const layoutFontSizes = ref(getInitialLayoutFontSizes())
 const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
 const editorWidth = ref(getInitialEditorWidth())
 const draftEditorWidth = ref(editorWidth.value)
+const attachmentDirectories = ref(getInitialAttachmentDirectories())
+const draftAttachmentDirectories = ref<AttachmentDirectories>({ ...attachmentDirectories.value })
 const sidebarWidth = ref(getInitialSidebarWidth())
 const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
@@ -383,6 +391,40 @@ async function flushSave() {
   }
 }
 
+async function handlePasteFiles(files: File[]) {
+  const document = activeDocument.value
+  if (!workspace.value || !document || files.length === 0) {
+    return
+  }
+
+  const relevantFiles = files.filter((file) => file.size > 0)
+  if (relevantFiles.length === 0) {
+    return
+  }
+  const missingDirectories = getMissingAttachmentDirectories(relevantFiles)
+  if (missingDirectories.length > 0) {
+    await promptConfigureAttachmentDirectories(missingDirectories)
+    return
+  }
+
+  try {
+    const markdown = await Promise.all(
+      relevantFiles.map(async (file) => {
+        const directory = isImageFile(file)
+          ? attachmentDirectories.value.images
+          : attachmentDirectories.value.files
+        const base64 = await readFileAsBase64(file)
+        const attachment = await SaveAttachment(directory, file.name, file.type, base64)
+        return attachmentMarkdown(file, attachment, document.path)
+      }),
+    )
+    insertMarkdown(markdown.join('\n'))
+    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
+  } catch (error) {
+    setError(error)
+  }
+}
+
 function insertMarkdown(markdown: string) {
   if (!activeDocument.value) return
   const spacer = editorContent.value && !editorContent.value.endsWith('\n') ? '\n\n' : ''
@@ -446,6 +488,7 @@ function prepareUtilityPanel(panel: UtilityPanel) {
   if (panel === 'settings') {
     draftLayoutFontSizes.value = { ...layoutFontSizes.value }
     draftEditorWidth.value = editorWidth.value
+    draftAttachmentDirectories.value = { ...attachmentDirectories.value }
   }
 }
 
@@ -470,6 +513,7 @@ function toggleUtilityPanel(panel: UtilityPanel) {
 function closeSettings() {
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   draftEditorWidth.value = editorWidth.value
+  draftAttachmentDirectories.value = { ...attachmentDirectories.value }
   showUtilityDrawer.value = false
 }
 
@@ -484,11 +528,20 @@ function setDraftEditorWidth(value: number) {
   draftEditorWidth.value = normalizeEditorWidth(value)
 }
 
+function setDraftAttachmentDirectory(key: keyof AttachmentDirectories, value: string) {
+  draftAttachmentDirectories.value = {
+    ...draftAttachmentDirectories.value,
+    [key]: value,
+  }
+}
+
 function saveSettings() {
   layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
   draftLayoutFontSizes.value = { ...layoutFontSizes.value }
   editorWidth.value = saveEditorWidth(draftEditorWidth.value)
   draftEditorWidth.value = editorWidth.value
+  attachmentDirectories.value = saveAttachmentDirectories(draftAttachmentDirectories.value)
+  draftAttachmentDirectories.value = { ...attachmentDirectories.value }
   showUtilityDrawer.value = false
 }
 
@@ -680,6 +733,78 @@ function isPathInsideTreeItem(path: string, treeItemPath: string) {
   return path === treeItemPath || path.startsWith(`${treeItemPath}/`)
 }
 
+function getMissingAttachmentDirectories(files: File[]) {
+  const missing: string[] = []
+  if (files.some(isImageFile) && !attachmentDirectories.value.images) {
+    missing.push('图片存储目录')
+  }
+  if (files.some((file) => !isImageFile(file)) && !attachmentDirectories.value.files) {
+    missing.push('文件存储目录')
+  }
+  return missing
+}
+
+async function promptConfigureAttachmentDirectories(missingDirectories: string[]) {
+  try {
+    await ElMessageBox.confirm(
+      `粘贴图片或文件前，请先在设置中配置${missingDirectories.join('和')}。`,
+      '未配置附件目录',
+      {
+        confirmButtonText: '去设置',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+    openUtilityPanel('settings')
+  } catch {
+    // User dismissed the configuration prompt.
+  }
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error ?? new Error('读取粘贴文件失败'))
+    reader.onload = () => {
+      const result = String(reader.result ?? '')
+      resolve(result.includes(',') ? result.slice(result.indexOf(',') + 1) : result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function attachmentMarkdown(file: File, attachment: main.Attachment, documentPath: string) {
+  const label = escapeMarkdownLabel(attachment.name)
+  const target = encodeURI(relativeLinkTarget(documentPath, attachment.path))
+  return isImageFile(file) ? `![${label}](${target})` : `[${label}](${target})`
+}
+
+function relativeLinkTarget(documentPath: string, attachmentPath: string) {
+  const documentParts = documentPath.split('/').slice(0, -1)
+  const attachmentParts = attachmentPath.split('/')
+  let shared = 0
+  while (
+    shared < documentParts.length &&
+    shared < attachmentParts.length &&
+    documentParts[shared] === attachmentParts[shared]
+  ) {
+    shared += 1
+  }
+
+  return [
+    ...Array(documentParts.length - shared).fill('..'),
+    ...attachmentParts.slice(shared),
+  ].join('/')
+}
+
+function escapeMarkdownLabel(value: string) {
+  return value.replaceAll('\\', '\\\\').replaceAll('[', '\\[').replaceAll(']', '\\]')
+}
+
+function isImageFile(file: File) {
+  return file.type.startsWith('image/')
+}
+
 function setError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
   errorMessage.value = message
@@ -746,6 +871,7 @@ function setError(error: unknown) {
         <EditorSurface
           v-model="editorContent"
           :document="activeDocument"
+          @paste-files="handlePasteFiles"
         />
       </main>
 
@@ -764,10 +890,12 @@ function setError(error: unknown) {
         :active-search-index="activeSearchIndex"
         :draft-layout-font-sizes="draftLayoutFontSizes"
         :draft-editor-width="draftEditorWidth"
+        :draft-attachment-directories="draftAttachmentDirectories"
         @previous-match="goToPreviousMatch"
         @next-match="goToNextMatch"
         @update-font-size="setDraftLayoutFontSize"
         @update-editor-width="setDraftEditorWidth"
+        @update-attachment-directory="setDraftAttachmentDirectory"
         @cancel-settings="closeSettings"
         @save-settings="saveSettings"
       />

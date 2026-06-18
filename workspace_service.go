@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -27,6 +28,11 @@ type Document struct {
 type SaveResult struct {
 	Path    string `json:"path"`
 	SavedAt string `json:"savedAt"`
+}
+
+type Attachment struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 type WorkspaceInfo struct {
@@ -238,6 +244,37 @@ func (s *WorkspaceService) DeletePath(relativePath string) error {
 	return nil
 }
 
+func (s *WorkspaceService) SaveAttachment(directoryRelativePath string, originalName string, mimeType string, dataBase64 string) (Attachment, error) {
+	directoryPath, cleanDirectory, err := s.resolvePath(directoryRelativePath, false)
+	if err != nil {
+		return Attachment{}, err
+	}
+	fileName, err := normalizeAttachmentName(originalName, mimeType)
+	if err != nil {
+		return Attachment{}, err
+	}
+	content, err := decodeBase64Payload(dataBase64)
+	if err != nil {
+		return Attachment{}, err
+	}
+	if err := os.MkdirAll(directoryPath, 0o755); err != nil {
+		return Attachment{}, fmt.Errorf("创建附件目录失败: %w", err)
+	}
+
+	finalName, fullPath, err := nextAvailableAttachmentPath(directoryPath, fileName)
+	if err != nil {
+		return Attachment{}, err
+	}
+	if err := os.WriteFile(fullPath, content, 0o644); err != nil {
+		return Attachment{}, fmt.Errorf("保存附件失败: %w", err)
+	}
+
+	return Attachment{
+		Name: finalName,
+		Path: joinRelative(cleanDirectory, finalName),
+	}, nil
+}
+
 func (s *WorkspaceService) scanDir(relative string) ([]FileNode, error) {
 	fullPath := s.root
 	if relative != "" {
@@ -349,6 +386,80 @@ func normalizeFolderName(name string) (string, error) {
 		return "", errors.New("文件夹名称不能为空且不能包含路径分隔符")
 	}
 	return trimmed, nil
+}
+
+func normalizeAttachmentName(name string, mimeType string) (string, error) {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		trimmed = "pasted-file" + extensionForMimeType(mimeType)
+	}
+	if trimmed == "." || trimmed == ".." || strings.ContainsAny(trimmed, `/\`) {
+		return "", errors.New("附件名称不能为空且不能包含路径分隔符")
+	}
+
+	sanitized := strings.Map(func(value rune) rune {
+		if value < 32 || strings.ContainsRune(`<>:"|?*`, value) {
+			return '_'
+		}
+		return value
+	}, trimmed)
+	sanitized = strings.TrimSpace(sanitized)
+	if sanitized == "" || sanitized == "." || sanitized == ".." {
+		return "", errors.New("附件名称无效")
+	}
+	if path.Ext(sanitized) == "" {
+		sanitized += extensionForMimeType(mimeType)
+	}
+	return sanitized, nil
+}
+
+func decodeBase64Payload(value string) ([]byte, error) {
+	trimmed := strings.TrimSpace(value)
+	if comma := strings.Index(trimmed, ","); strings.HasPrefix(trimmed, "data:") && comma >= 0 {
+		trimmed = trimmed[comma+1:]
+	}
+	content, err := base64.StdEncoding.DecodeString(trimmed)
+	if err != nil {
+		return nil, fmt.Errorf("附件内容不是有效的 base64: %w", err)
+	}
+	return content, nil
+}
+
+func nextAvailableAttachmentPath(directoryPath string, fileName string) (string, string, error) {
+	extension := path.Ext(fileName)
+	baseName := strings.TrimSuffix(fileName, extension)
+	for index := 0; index < 10_000; index++ {
+		candidate := fileName
+		if index > 0 {
+			candidate = fmt.Sprintf("%s-%d%s", baseName, index, extension)
+		}
+		fullPath := filepath.Join(directoryPath, candidate)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			return candidate, fullPath, nil
+		} else if err != nil {
+			return "", "", fmt.Errorf("检查附件名称失败: %w", err)
+		}
+	}
+	return "", "", errors.New("无法生成可用的附件名称")
+}
+
+func extensionForMimeType(mimeType string) string {
+	switch strings.ToLower(strings.TrimSpace(mimeType)) {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	case "image/svg+xml":
+		return ".svg"
+	case "application/pdf":
+		return ".pdf"
+	default:
+		return ".bin"
+	}
 }
 
 func isMarkdown(value string) bool {

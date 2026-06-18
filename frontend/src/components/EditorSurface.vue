@@ -10,6 +10,7 @@ defineProps<{
 
 defineEmits<{
   (event: 'update:modelValue', value: string): void
+  (event: 'paste-files', files: File[]): void
 }>()
 </script>
 
@@ -20,6 +21,7 @@ defineEmits<{
         :model-value="modelValue"
         :active-path="document.path"
         @update:model-value="$emit('update:modelValue', $event)"
+        @paste-files="$emit('paste-files', $event)"
       />
     </template>
 

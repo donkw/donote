@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ElButton, ElForm, ElFormItem, ElSlider } from 'element-plus'
+import { ElButton, ElForm, ElFormItem, ElInput, ElSlider } from 'element-plus'
+import type { AttachmentDirectories } from '../lib/attachmentDirectories'
 import { editorWidthControl } from '../lib/editorWidth'
 import {
   layoutFontSizeControls,
@@ -10,11 +11,13 @@ import {
 defineProps<{
   modelValue: LayoutFontSizes
   editorWidth: number
+  attachmentDirectories: AttachmentDirectories
 }>()
 
 defineEmits<{
   (event: 'update-font-size', area: LayoutFontSizeArea, value: number): void
   (event: 'update-editor-width', value: number): void
+  (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
   (event: 'cancel'): void
   (event: 'save'): void
 }>()
@@ -34,6 +37,26 @@ defineEmits<{
           :step="editorWidthControl.step"
           show-input
           @update:model-value="$emit('update-editor-width', Number($event))"
+        />
+      </ElFormItem>
+    </ElForm>
+
+    <p class="panel-subtitle">附件存储目录</p>
+    <ElForm label-position="top">
+      <ElFormItem label="图片目录">
+        <ElInput
+          data-test="attachment-image-dir"
+          :model-value="attachmentDirectories.images"
+          placeholder="例如 assets/images"
+          @update:model-value="$emit('update-attachment-directory', 'images', $event)"
+        />
+      </ElFormItem>
+      <ElFormItem label="文件目录">
+        <ElInput
+          data-test="attachment-file-dir"
+          :model-value="attachmentDirectories.files"
+          placeholder="例如 assets/files"
+          @update:model-value="$emit('update-attachment-directory', 'files', $event)"
         />
       </ElFormItem>
     </ElForm>

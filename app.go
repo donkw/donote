@@ -131,6 +131,14 @@ func (a *App) DeletePath(relativePath string) error {
 	return service.DeletePath(relativePath)
 }
 
+func (a *App) SaveAttachment(directoryRelativePath string, originalName string, mimeType string, dataBase64 string) (Attachment, error) {
+	service, err := a.requireWorkspace()
+	if err != nil {
+		return Attachment{}, err
+	}
+	return service.SaveAttachment(directoryRelativePath, originalName, mimeType, dataBase64)
+}
+
 func (a *App) requireWorkspace() (*WorkspaceService, error) {
 	if a.workspace == nil {
 		return nil, ErrWorkspaceNotSelected
