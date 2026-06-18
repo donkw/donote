@@ -12,6 +12,7 @@ import {
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
+import { EventsOn } from '../wailsjs/runtime/runtime'
 import AppHeader from './components/AppHeader.vue'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
@@ -48,6 +49,7 @@ const loadingDocument = ref(false)
 const layoutFontSizes = ref(getInitialLayoutFontSizes())
 const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
 const collapsedFolderPaths = ref<Set<string>>(new Set())
+const menuEventCleanups: Array<() => void> = []
 
 const expandedFolderPaths = computed(() =>
   workspace.value
@@ -98,11 +100,22 @@ watch(searchQuery, () => {
 onMounted(() => {
   applyTheme(theme.value)
   window.addEventListener('keydown', handleKeydown)
+  menuEventCleanups.push(
+    EventsOn('menu:open-workspace', () => {
+      void openWorkspace()
+    }),
+    EventsOn('menu:create-note', () => {
+      void createNote()
+    }),
+  )
   void restoreLastWorkspace()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  while (menuEventCleanups.length) {
+    menuEventCleanups.pop()?.()
+  }
 })
 
 async function openWorkspace() {
@@ -456,8 +469,6 @@ function setError(error: unknown) {
         :tree="workspace?.tree ?? []"
         :active-file-path="activeFilePath"
         :expanded-folder-paths="expandedFolderPaths"
-        @open-workspace="openWorkspace"
-        @create-note="createNote"
         @select-file="selectFile"
         @folder-expanded="setFolderCollapsed($event, false)"
         @folder-collapsed="setFolderCollapsed($event, true)"
@@ -476,7 +487,6 @@ function setError(error: unknown) {
           :document="activeDocument"
           @rename="renameActiveDocument"
           @delete="deleteActiveDocument"
-          @open-workspace="openWorkspace"
         />
       </main>
 

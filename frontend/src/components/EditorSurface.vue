@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FolderOpen, Pencil, Trash2 } from '@lucide/vue'
+import { Pencil, Trash2 } from '@lucide/vue'
 import { ElButton, ElEmpty, ElTooltip } from 'element-plus'
 import type { OpenDocument } from '../types/app'
 import MilkdownEditor from './MilkdownEditor.vue'
@@ -13,7 +13,6 @@ defineEmits<{
   (event: 'update:modelValue', value: string): void
   (event: 'rename'): void
   (event: 'delete'): void
-  (event: 'open-workspace'): void
 }>()
 </script>
 
@@ -46,11 +45,6 @@ defineEmits<{
       />
     </template>
 
-    <ElEmpty v-else class="empty-state" description="选择一个笔记文件夹开始写作">
-      <ElButton type="primary" @click="$emit('open-workspace')">
-        <FolderOpen :size="18" />
-        <span>打开文件夹</span>
-      </ElButton>
-    </ElEmpty>
+    <ElEmpty v-else class="empty-state" description="选择一个笔记文件夹开始写作" />
   </section>
 </template>

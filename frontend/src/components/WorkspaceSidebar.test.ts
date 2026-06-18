@@ -14,7 +14,7 @@ const tree: main.FileNode[] = [
 ]
 
 describe('WorkspaceSidebar', () => {
-  test('renders workspace controls and file tree', () => {
+  test('renders workspace title, search, and an indented file tree', () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {
         workspaceName: 'notes',
@@ -25,12 +25,21 @@ describe('WorkspaceSidebar', () => {
     })
 
     expect(wrapper.text()).toContain('notes')
-    expect(wrapper.text()).toContain('打开文件夹')
+    expect(wrapper.find('[data-test="open-workspace"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="new-note"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="file-tree-search"] input').attributes('placeholder')).toBe(
+      '搜索文件',
+    )
     expect(wrapper.text()).toContain('projects')
     expect(wrapper.text()).toContain('plan.md')
     expect(wrapper.get('[data-test="folder-projects"]').classes()).toContain('folder')
+    expect(wrapper.get('[data-test="folder-projects"]').attributes('style')).toContain(
+      '--tree-depth: 0',
+    )
     expect(wrapper.get('[data-test="file-projects/plan.md"]').classes()).toContain('active')
-    expect(wrapper.get('[data-test="new-note"]').attributes('title')).toBe('新建笔记')
+    expect(wrapper.get('[data-test="file-projects/plan.md"]').attributes('style')).toContain(
+      '--tree-depth: 1',
+    )
   })
 
   test('emits select-file with the file path', async () => {
@@ -70,7 +79,7 @@ describe('WorkspaceSidebar', () => {
     expect(folderRow.classes()).toContain('tree-row')
     await folderRow.trigger('click')
 
-    expect(getNode).toHaveBeenCalledWith(tree[0])
+    expect(getNode).toHaveBeenCalledWith('projects')
     expect(collapse).toHaveBeenCalledTimes(1)
     expect(expand).not.toHaveBeenCalled()
     expect(wrapper.emitted('folder-collapsed')).toEqual([['projects']])
@@ -97,27 +106,33 @@ describe('WorkspaceSidebar', () => {
 
     await wrapper.get('[data-test="folder-projects"]').trigger('click')
 
-    expect(getNode).toHaveBeenCalledWith(tree[0])
+    expect(getNode).toHaveBeenCalledWith('projects')
     expect(expand).toHaveBeenCalledTimes(1)
     expect(collapse).not.toHaveBeenCalled()
     expect(wrapper.emitted('folder-expanded')).toEqual([['projects']])
     expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
   })
 
-  test('emits open and create intents', async () => {
+  test('filters tree nodes from the sidebar search', async () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {
-        workspaceName: '',
-        tree: [],
+        workspaceName: 'notes',
+        tree,
         activeFilePath: '',
-        expandedFolderPaths: [],
+        expandedFolderPaths: ['projects'],
       },
     })
 
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
-    await wrapper.get('[data-test="new-note"]').trigger('click')
+    const filter = vi.spyOn(wrapper.getComponent(ElTree).vm, 'filter')
+    await wrapper.get('[data-test="file-tree-search"] input').setValue('plan')
 
-    expect(wrapper.emitted('open-workspace')).toHaveLength(1)
-    expect(wrapper.emitted('create-note')).toHaveLength(1)
+    expect(filter).toHaveBeenLastCalledWith('plan')
+
+    const filterNodeMethod = wrapper.getComponent(ElTree).props(
+      'filterNodeMethod',
+    ) as (value: string, data: main.FileNode) => boolean
+    const fileNode = tree[0].children?.[0] as main.FileNode
+    expect(filterNodeMethod('plan', fileNode)).toBe(true)
+    expect(filterNodeMethod('missing', fileNode)).toBe(false)
   })
 })

@@ -317,7 +317,7 @@ textarea:focus-visible {
 .workspace-sidebar,
 .sidebar {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -326,16 +326,12 @@ textarea:focus-visible {
   font-size: var(--sidebar-font-size, 13px);
 }
 
-.sidebar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.sidebar-header {
+  display: grid;
+  gap: 10px;
   padding: 12px;
-}
-
-.sidebar-actions .el-button:first-child {
-  flex: 1 1 auto;
-  justify-content: flex-start;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-muted), var(--surface) 46%);
 }
 
 .workspace-title {
@@ -343,7 +339,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 8px;
   min-height: 36px;
-  margin: 0 10px 8px;
+  margin: 0;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -361,7 +357,22 @@ textarea:focus-visible {
 }
 
 .sidebar-empty {
-  margin: 16px 12px;
+  margin: 4px 0;
+  color: var(--text-subtle);
+}
+
+.file-tree-search .el-input__wrapper {
+  min-height: 34px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+
+.file-tree-search .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.file-tree-search .el-input__prefix {
   color: var(--text-subtle);
 }
 
@@ -380,7 +391,7 @@ textarea:focus-visible {
 
 .file-tree {
   min-height: 100%;
-  padding: 4px 8px 16px;
+  padding: 8px 8px 16px;
   background: transparent;
   color: var(--text);
 }
@@ -400,6 +411,10 @@ textarea:focus-visible {
   background: transparent;
 }
 
+.file-tree .el-tree-node__children {
+  position: relative;
+}
+
 .tree-row,
 .file-tree-node,
 .outline-row {
@@ -409,7 +424,7 @@ textarea:focus-visible {
   min-width: 0;
   min-height: 30px;
   gap: 7px;
-  padding: 4px 8px;
+  padding: 4px 8px 4px calc(8px + (var(--tree-depth, 0) * 16px));
   border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
@@ -422,6 +437,27 @@ textarea:focus-visible {
     background-color 140ms ease,
     border-color 140ms ease,
     color 140ms ease;
+}
+
+.file-tree-node {
+  position: relative;
+}
+
+.file-tree-node::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: calc(10px + (var(--tree-depth, 0) * 16px));
+  width: 1px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border), transparent 20%);
+  content: '';
+  opacity: min(var(--tree-depth, 0), 1);
+}
+
+.file-tree-node svg,
+.file-tree-node__name {
+  position: relative;
 }
 
 .tree-row.folder {

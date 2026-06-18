@@ -22,6 +22,16 @@ const elementPlusMocks = vi.hoisted(() => ({
   error: vi.fn(),
   success: vi.fn(),
 }))
+const runtimeMocks = vi.hoisted(() => {
+  const events = new Map<string, (...args: unknown[]) => void>()
+  return {
+    events,
+    EventsOn: vi.fn((eventName: string, callback: (...args: unknown[]) => void) => {
+      events.set(eventName, callback)
+      return () => events.delete(eventName)
+    }),
+  }
+})
 
 vi.mock('../wailsjs/go/main/App', () => ({
   SelectWorkspace: vi.fn(),
@@ -32,6 +42,10 @@ vi.mock('../wailsjs/go/main/App', () => ({
   CreateMarkdown: vi.fn(),
   RenamePath: vi.fn(),
   DeletePath: vi.fn(),
+}))
+
+vi.mock('../wailsjs/runtime/runtime', () => ({
+  EventsOn: runtimeMocks.EventsOn,
 }))
 
 vi.mock('element-plus', async () => {
@@ -75,10 +89,17 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
   }),
 }))
 
+function emitMenuEvent(eventName: 'menu:open-workspace' | 'menu:create-note') {
+  const handler = runtimeMocks.events.get(eventName)
+  expect(handler).toBeDefined()
+  handler?.()
+}
+
 describe('App shell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     emitInitialMarkdown = null
+    runtimeMocks.events.clear()
     window.localStorage.clear()
     elementPlusMocks.confirm.mockResolvedValue('confirm')
     elementPlusMocks.prompt.mockResolvedValue({ value: '未命名.md' })
@@ -88,7 +109,6 @@ describe('App shell', () => {
     const wrapper = mount(App)
 
     expect(wrapper.text()).toContain('Donote')
-    expect(wrapper.text()).toContain('打开文件夹')
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
   })
 
@@ -99,6 +119,23 @@ describe('App shell', () => {
     expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="utility-outline"]').exists()).toBe(true)
+  })
+
+  test('registers native menu actions and cleans them up on unmount', () => {
+    const wrapper = mount(App)
+
+    expect(runtimeMocks.EventsOn).toHaveBeenCalledWith(
+      'menu:open-workspace',
+      expect.any(Function),
+    )
+    expect(runtimeMocks.EventsOn).toHaveBeenCalledWith('menu:create-note', expect.any(Function))
+    expect(runtimeMocks.events.has('menu:open-workspace')).toBe(true)
+    expect(runtimeMocks.events.has('menu:create-note')).toBe(true)
+
+    wrapper.unmount()
+
+    expect(runtimeMocks.events.has('menu:open-workspace')).toBe(false)
+    expect(runtimeMocks.events.has('menu:create-note')).toBe(false)
   })
 
   test('restores the last opened workspace on startup', async () => {
@@ -142,7 +179,7 @@ describe('App shell', () => {
     })
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
     expect(wrapper.text()).toContain('notes')
@@ -179,7 +216,7 @@ describe('App shell', () => {
     }))
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -227,7 +264,7 @@ describe('App shell', () => {
     }))
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -263,7 +300,7 @@ describe('App shell', () => {
     })
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -302,7 +339,7 @@ describe('App shell', () => {
     }))
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -353,7 +390,7 @@ describe('App shell', () => {
     })
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -403,7 +440,7 @@ describe('App shell', () => {
     }))
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -444,7 +481,7 @@ describe('App shell', () => {
     } as any)
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
     expect(wrapper.find('[data-test="file-projects/plan.md"]').exists()).toBe(true)
@@ -459,7 +496,7 @@ describe('App shell', () => {
 
     wrapper.unmount()
     const reopened = mount(App)
-    await reopened.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
     expect(reopened.find('[data-test="file-projects/plan.md"]').exists()).toBe(false)
@@ -497,11 +534,11 @@ describe('App shell', () => {
     })
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     vi.mocked(SelectWorkspace).mockClear()
 
-    await wrapper.get('[data-test="new-note"]').trigger('click')
+    emitMenuEvent('menu:create-note')
     await flushPromises()
 
     expect(ElMessageBox.prompt).toHaveBeenCalledWith(
@@ -528,16 +565,16 @@ describe('App shell', () => {
     } as any)
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
-    await wrapper.get('[data-test="new-note"]').trigger('click')
+    emitMenuEvent('menu:create-note')
     await flushPromises()
 
     expect(CreateMarkdown).not.toHaveBeenCalled()
 
     elementPlusMocks.prompt.mockResolvedValueOnce({ value: '' })
-    await wrapper.get('[data-test="new-note"]').trigger('click')
+    emitMenuEvent('menu:create-note')
     await flushPromises()
 
     expect(CreateMarkdown).not.toHaveBeenCalled()
@@ -552,10 +589,10 @@ describe('App shell', () => {
     } as any)
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
-    await wrapper.get('[data-test="new-note"]').trigger('click')
+    emitMenuEvent('menu:create-note')
     await flushPromises()
 
     expect(CreateMarkdown).not.toHaveBeenCalled()
@@ -593,7 +630,7 @@ describe('App shell', () => {
     ])
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -636,7 +673,7 @@ describe('App shell', () => {
     })
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -679,7 +716,7 @@ describe('App shell', () => {
     ])
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -725,7 +762,7 @@ describe('App shell', () => {
     vi.mocked(ReadMarkdown).mockRejectedValue(new Error('无法读取笔记'))
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
@@ -806,7 +843,7 @@ describe('App shell', () => {
     })
 
     const wrapper = mount(App)
-    await wrapper.get('[data-test="open-workspace"]').trigger('click')
+    emitMenuEvent('menu:open-workspace')
     await flushPromises()
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()

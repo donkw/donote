@@ -68,7 +68,7 @@ describe('EditorSurface', () => {
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['# Revised'])
   })
 
-  test('renders the empty state button and emits open-workspace when no document is active', async () => {
+  test('renders an empty state without workspace management buttons', () => {
     const wrapper = mount(EditorSurface, {
       props: {
         document: null,
@@ -77,8 +77,7 @@ describe('EditorSurface', () => {
     })
 
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
-    await wrapper.get('button').trigger('click')
-
-    expect(wrapper.emitted('open-workspace')?.length).toBe(1)
+    expect(wrapper.find('button').exists()).toBe(false)
+    expect(wrapper.emitted('open-workspace')).toBeUndefined()
   })
 })
