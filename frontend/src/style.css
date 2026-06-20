@@ -41,31 +41,44 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  color: #e5eefb;
-  background: #111827;
-  --app-bg: #111827;
-  --surface: #1f2937;
-  --surface-muted: #172033;
-  --border: #334155;
-  --text: #e5eefb;
-  --text-muted: #a8b3c4;
-  --text-subtle: #7f8da1;
-  --accent: #5eead4;
-  --accent-soft: #143b3b;
-  --accent-strong: #99f6e4;
+  color: #d8dee9;
+  background: #11151c;
+  --app-bg: #11151c;
+  --surface: #202632;
+  --surface-muted: #161a22;
+  --surface-raised: #252d3a;
+  --border: #2b3240;
+  --text: #d8dee9;
+  --text-muted: #9aa7bc;
+  --text-subtle: #6e7a90;
+  --accent: #7ea7ff;
+  --accent-soft: #2b3a56;
+  --accent-strong: #d9e7ff;
   --danger: #ff8a80;
   --warning: #f2bd66;
   --shadow-soft: 0 20px 48px rgba(0, 0, 0, 0.34);
   --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --focus-ring: 0 0 0 3px rgba(94, 234, 212, 0.22);
+  --focus-ring: 0 0 0 3px rgba(126, 167, 255, 0.24);
   --el-color-primary: var(--accent);
+  --el-color-primary-light-3: #a9c5ff;
+  --el-color-primary-light-5: #6f8ed1;
+  --el-color-primary-light-7: #344665;
+  --el-color-primary-light-8: #2b3a56;
+  --el-color-primary-light-9: #223047;
+  --el-color-primary-dark-2: #b7cdff;
   --el-text-color-primary: var(--text);
   --el-text-color-regular: var(--text-muted);
   --el-text-color-secondary: var(--text-subtle);
   --el-border-color: var(--border);
   --el-border-color-light: var(--border);
+  --el-border-color-lighter: var(--border);
+  --el-fill-color: var(--surface);
+  --el-fill-color-light: var(--surface-raised);
+  --el-fill-color-lighter: var(--surface-raised);
   --el-fill-color-blank: var(--surface);
   --el-bg-color: var(--surface);
+  --el-bg-color-overlay: var(--surface-raised);
+  --el-mask-color: rgba(5, 8, 13, 0.64);
 }
 
 * {
@@ -108,6 +121,66 @@ textarea:focus-visible {
 
 .el-button {
   letter-spacing: 0;
+}
+
+:root[data-theme='dark'] .el-input__wrapper,
+:root[data-theme='dark'] .el-textarea__inner {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+
+:root[data-theme='dark'] .el-input__wrapper.is-focus,
+:root[data-theme='dark'] .el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text) {
+  --el-button-text-color: var(--app-bg);
+  --el-button-hover-text-color: var(--app-bg);
+  --el-button-active-text-color: var(--app-bg);
+  --el-button-bg-color: var(--accent);
+  --el-button-border-color: var(--accent);
+  --el-button-hover-bg-color: #a9c5ff;
+  --el-button-hover-border-color: #a9c5ff;
+  --el-button-active-bg-color: #6f8ed1;
+  --el-button-active-border-color: #6f8ed1;
+  color: var(--app-bg);
+}
+
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text):hover,
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text):focus-visible,
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text):active {
+  color: var(--app-bg);
+}
+
+:root[data-theme='dark'] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-disabled):not([disabled]):not(.is-text) {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+:root[data-theme='dark'] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-disabled):not([disabled]):not(.is-text):hover,
+:root[data-theme='dark'] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-disabled):not([disabled]):not(.is-text):focus-visible {
+  border-color: color-mix(in srgb, var(--accent), transparent 38%);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+:root[data-theme='dark'] .el-button.is-text:not(.is-disabled):not([disabled]) {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+:root[data-theme='dark'] .el-button.is-text:not(.is-disabled):not([disabled]):hover,
+:root[data-theme='dark'] .el-button.is-text:not(.is-disabled):not([disabled]):focus-visible {
+  background: color-mix(in srgb, var(--accent-soft), transparent 44%);
+  color: var(--accent-strong);
+}
+
+:root[data-theme='dark'] .el-button.is-disabled,
+:root[data-theme='dark'] .el-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .el-drawer.utility-drawer {
@@ -241,7 +314,7 @@ textarea:focus-visible {
   border: 0;
   border-right: 1px solid var(--border);
   border-left: 1px solid transparent;
-  background: color-mix(in srgb, var(--surface-muted), var(--app-bg) 30%);
+  background: color-mix(in srgb, var(--surface-muted), var(--app-bg) 35%);
   cursor: col-resize;
 }
 
@@ -271,22 +344,27 @@ textarea:focus-visible {
   gap: 10px;
   padding: 12px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-muted), var(--surface) 46%);
+  background: color-mix(in srgb, var(--surface-muted), var(--surface) 28%);
+}
+
+.workspace-sidebar__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
 }
 
 .workspace-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 36px;
+  min-width: 0;
+  min-height: 30px;
   margin: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 780;
+  letter-spacing: 0;
 }
 
 .workspace-title span {
@@ -294,6 +372,36 @@ textarea:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.workspace-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.workspace-action-button {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.workspace-action-button:hover,
+.workspace-action-button:focus-visible {
+  border-color: color-mix(in srgb, var(--accent), transparent 40%);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .sidebar-empty {
@@ -362,13 +470,13 @@ textarea:focus-visible {
   align-items: center;
   width: 100%;
   min-width: 0;
-  min-height: 30px;
+  min-height: 31px;
   gap: 7px;
   padding: 4px 8px 4px calc(8px + (var(--tree-depth, 0) * 16px));
   border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-muted);
   font-size: inherit;
   line-height: 1.3;
   text-align: left;
@@ -385,23 +493,21 @@ textarea:focus-visible {
 
 .file-tree-node::before {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
+  top: 7px;
+  bottom: 7px;
   left: calc(10px + (var(--tree-depth, 0) * 16px));
   width: 1px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--border), transparent 20%);
+  background: color-mix(in srgb, var(--border), transparent 16%);
   content: '';
   opacity: min(var(--tree-depth, 0), 1);
 }
 
 .file-tree-node.workspace-root {
-  min-height: 34px;
-  margin-bottom: 4px;
-  border-color: var(--border);
-  background: var(--surface);
+  min-height: 32px;
+  margin-bottom: 5px;
   color: var(--text);
-  font-weight: 760;
+  font-weight: 780;
 }
 
 .file-tree-node.workspace-root::before {
@@ -414,20 +520,20 @@ textarea:focus-visible {
 }
 
 .tree-row.folder {
-  color: var(--text-muted);
+  color: var(--text);
   font-weight: 700;
 }
 
 .tree-row.active,
 .file-tree .is-current > .el-tree-node__content .tree-row {
-  border-color: color-mix(in srgb, var(--accent), transparent 60%);
+  border-color: color-mix(in srgb, var(--accent), transparent 44%);
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
 
 .tree-row:hover,
 .outline-row:hover {
-  background: color-mix(in srgb, var(--surface), var(--border) 28%);
+  background: color-mix(in srgb, var(--surface), var(--border) 24%);
   color: var(--text);
 }
 
@@ -448,12 +554,12 @@ textarea:focus-visible {
   position: absolute;
   z-index: 30;
   display: grid;
-  min-width: 144px;
+  min-width: 152px;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 14px 34px rgb(15 23 42 / 14%);
+  background: var(--surface-raised, var(--surface));
+  box-shadow: 0 18px 44px rgb(0 0 0 / 30%);
 }
 
 .context-menu-item {
@@ -502,7 +608,7 @@ textarea:focus-visible {
   grid-row: 1;
   min-width: 0;
   min-height: 40px;
-  background: color-mix(in srgb, var(--surface), var(--app-bg) 34%);
+  background: var(--surface-muted);
 }
 
 .document-tabs .el-tabs__header {
@@ -519,11 +625,13 @@ textarea:focus-visible {
 .document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item {
   max-width: 210px;
   height: 33px;
-  padding: 0 8px;
+  margin-right: 6px;
+  padding: 0 10px;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: 8px 8px 0 0;
+  background: color-mix(in srgb, var(--surface), var(--surface-muted) 32%);
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 700;
@@ -768,12 +876,23 @@ textarea:focus-visible {
   background: var(--surface-muted);
 }
 
-.utility-rail .el-button {
+.utility-rail .el-button:not(.is-text) {
   width: 34px;
   height: 34px;
   min-height: 34px;
   margin: 0;
+  border-color: var(--border);
   border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.utility-rail .el-button:not(.is-disabled):not([disabled]):not(.is-text):hover,
+.utility-rail .el-button:not(.is-disabled):not([disabled]):not(.is-text):focus-visible,
+.utility-rail .el-button.el-button--primary:not(.is-disabled):not([disabled]):not(.is-text) {
+  border-color: color-mix(in srgb, var(--accent), transparent 38%);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .utility-rail__divider {
@@ -836,7 +955,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 6px 32px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface), var(--app-bg) 34%);
+  background: var(--surface-muted);
 }
 
 .search-panel .el-input {

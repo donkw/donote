@@ -32,9 +32,10 @@ describe('WorkspaceSidebar', () => {
     })
 
     expect(wrapper.text()).toContain('notes')
-    expect(wrapper.find('.workspace-title').exists()).toBe(false)
+    expect(wrapper.get('.workspace-title').text()).toBe('notes')
     expect(wrapper.find('[data-test="open-workspace"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="new-note"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="new-note"]').attributes('aria-label')).toBe('新建笔记')
+    expect(wrapper.get('[data-test="new-folder"]').attributes('aria-label')).toBe('新建文件夹')
     expect(wrapper.get('[data-test="file-tree-search"] input').attributes('placeholder')).toBe(
       '搜索文件',
     )
@@ -142,6 +143,23 @@ describe('WorkspaceSidebar', () => {
     })
     await wrapper.get('[data-test="context-rename"]').trigger('click')
     expect(wrapper.emitted('rename-node')).toEqual([['projects']])
+  })
+
+  test('emits root-level creation actions from the sidebar header', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects', 'projects/archive'],
+      },
+    })
+
+    await wrapper.get('[data-test="new-note"]').trigger('click')
+    await wrapper.get('[data-test="new-folder"]').trigger('click')
+
+    expect(wrapper.emitted('create-markdown')).toEqual([['']])
+    expect(wrapper.emitted('create-folder')).toEqual([['']])
   })
 
   test('uses the workspace root context menu for root-level creation only', async () => {
