@@ -48,7 +48,6 @@
   --surface-muted: #161a22;
   --surface-raised: #252d3a;
   --border: #2b3240;
-  --border-strong: #3b4658;
   --text: #d8dee9;
   --text-muted: #9aa7bc;
   --text-subtle: #6e7a90;
@@ -135,17 +134,53 @@ textarea:focus-visible {
   box-shadow: 0 0 0 1px var(--accent) inset;
 }
 
-:root[data-theme='dark'] .el-button:not(.el-button--primary) {
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text) {
+  --el-button-text-color: var(--app-bg);
+  --el-button-hover-text-color: var(--app-bg);
+  --el-button-active-text-color: var(--app-bg);
+  --el-button-bg-color: var(--accent);
+  --el-button-border-color: var(--accent);
+  --el-button-hover-bg-color: #a9c5ff;
+  --el-button-hover-border-color: #a9c5ff;
+  --el-button-active-bg-color: #6f8ed1;
+  --el-button-active-border-color: #6f8ed1;
+  color: var(--app-bg);
+}
+
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text):hover,
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text):focus-visible,
+:root[data-theme='dark'] .el-button--primary:not(.is-disabled):not([disabled]):not(.is-text):active {
+  color: var(--app-bg);
+}
+
+:root[data-theme='dark'] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-disabled):not([disabled]):not(.is-text) {
   border-color: var(--border);
   background: var(--surface);
   color: var(--text-muted);
 }
 
-:root[data-theme='dark'] .el-button:not(.el-button--primary):hover,
-:root[data-theme='dark'] .el-button:not(.el-button--primary):focus-visible {
+:root[data-theme='dark'] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-disabled):not([disabled]):not(.is-text):hover,
+:root[data-theme='dark'] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-disabled):not([disabled]):not(.is-text):focus-visible {
   border-color: color-mix(in srgb, var(--accent), transparent 38%);
   background: var(--accent-soft);
   color: var(--accent-strong);
+}
+
+:root[data-theme='dark'] .el-button.is-text:not(.is-disabled):not([disabled]) {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+:root[data-theme='dark'] .el-button.is-text:not(.is-disabled):not([disabled]):hover,
+:root[data-theme='dark'] .el-button.is-text:not(.is-disabled):not([disabled]):focus-visible {
+  background: color-mix(in srgb, var(--accent-soft), transparent 44%);
+  color: var(--accent-strong);
+}
+
+:root[data-theme='dark'] .el-button.is-disabled,
+:root[data-theme='dark'] .el-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .el-drawer.utility-drawer {
@@ -841,7 +876,7 @@ textarea:focus-visible {
   background: var(--surface-muted);
 }
 
-.utility-rail .el-button {
+.utility-rail .el-button:not(.is-text) {
   width: 34px;
   height: 34px;
   min-height: 34px;
@@ -852,9 +887,9 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
-.utility-rail .el-button:hover,
-.utility-rail .el-button:focus-visible,
-.utility-rail .el-button.el-button--primary {
+.utility-rail .el-button:not(.is-disabled):not([disabled]):not(.is-text):hover,
+.utility-rail .el-button:not(.is-disabled):not([disabled]):not(.is-text):focus-visible,
+.utility-rail .el-button.el-button--primary:not(.is-disabled):not([disabled]):not(.is-text) {
   border-color: color-mix(in srgb, var(--accent), transparent 38%);
   background: var(--accent-soft);
   color: var(--accent-strong);
