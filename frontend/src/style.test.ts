@@ -56,9 +56,19 @@ describe('Obsidian dark shell styles', () => {
 
   test('defines focused dark shell styling hooks for the main surfaces', () => {
     expect(cssBlock('.workspace-sidebar')).toMatch(/background:\s*var\(--surface-muted\)/)
-    expect(cssBlock('.workspace-sidebar__top')).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto/)
+    expect(cssBlock('.sidebar-header')).toMatch(/padding:\s*8px 12px/)
+    expect(cssBlock('.workspace-sidebar__top')).toBe('')
     expect(cssBlock('.file-tree-context-menu')).toMatch(/box-shadow:\s*0 18px 44px/)
     expect(cssBlock('.document-tabs.el-tabs')).toMatch(/background:\s*var\(--surface-muted\)/)
+    expect(cssBlock('.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item')).toMatch(
+      /color:\s*var\(--text-subtle\)/,
+    )
+    const activeTabBlock = cssBlock(
+      '.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item.is-active',
+    )
+    expect(activeTabBlock).toMatch(/border-color:\s*color-mix\(in srgb,\s*var\(--accent\)/)
+    expect(activeTabBlock).toMatch(/color:\s*var\(--accent-strong\)/)
+    expect(activeTabBlock).toMatch(/box-shadow:\s*inset 0 2px 0 var\(--accent\)/)
     expect(cssBlock('.utility-rail')).toMatch(/background:\s*var\(--surface-muted\)/)
     expect(cssBlock('.el-drawer.utility-drawer')).toMatch(/background:\s*var\(--surface\)/)
   })

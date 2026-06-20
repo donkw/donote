@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   defaultLayoutFontSizes,
   getInitialLayoutFontSizes,
+  layoutFontSizeControls,
   layoutFontSizeStorageKey,
   normalizeLayoutFontSizes,
 } from './layoutFontSizes'
@@ -42,6 +43,17 @@ describe('layout font sizes', () => {
       sidebar: 12,
       editor: 20,
       outline: 18,
+    })
+  })
+
+  test('supports smaller editor font sizes down to 12 pixels', () => {
+    const editorControl = layoutFontSizeControls.find((control) => control.key === 'editor')
+
+    expect(editorControl?.min).toBe(12)
+    expect(normalizeLayoutFontSizes({ sidebar: 13, editor: 10, outline: 13 })).toEqual({
+      sidebar: 13,
+      editor: 12,
+      outline: 13,
     })
   })
 

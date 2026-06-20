@@ -1211,7 +1211,7 @@ describe('App shell', () => {
     expect(wrapper.find('.utility-drawer [data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('布局字体大小')
     await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
-    await wrapper.get('[data-test="font-size-editor"] input').setValue(19)
+    await wrapper.get('[data-test="font-size-editor"] input').setValue(12)
     await wrapper.get('[data-test="font-size-outline"] input').setValue(14)
     await wrapper.get('[data-test="editor-width"] input').setValue(1100)
     await wrapper.get('[data-test="attachment-image-dir"]').setValue('assets/images')
@@ -1230,11 +1230,11 @@ describe('App shell', () => {
 
     const layoutStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
     expect(layoutStyle).toContain('--sidebar-font-size: 12px')
-    expect(layoutStyle).toContain('--editor-font-size: 19px')
+    expect(layoutStyle).toContain('--editor-font-size: 12px')
     expect(layoutStyle).toContain('--outline-font-size: 14px')
     expect(layoutStyle).toContain('--editor-content-width: 1100px')
     expect(window.localStorage.getItem('donote.layoutFontSizes')).toBe(
-      '{"sidebar":12,"editor":19,"outline":14}',
+      '{"sidebar":12,"editor":12,"outline":14}',
     )
     expect(window.localStorage.getItem('donote.editorWidth')).toBe('1100')
     expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(

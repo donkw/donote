@@ -33,6 +33,7 @@ yarn-error.log*
 
 # Local analysis caches
 .codegraph/
+.superpowers/
 .worktrees/
 
 log

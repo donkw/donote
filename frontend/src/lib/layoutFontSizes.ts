@@ -21,13 +21,13 @@ export const layoutFontSizeControls: Array<{
   max: number
 }> = [
   { key: 'sidebar', label: '左侧目录栏', min: 12, max: 18 },
-  { key: 'editor', label: '中间编辑区', min: 14, max: 22 },
+  { key: 'editor', label: '中间编辑区', min: 12, max: 22 },
   { key: 'outline', label: '右侧大纲栏', min: 12, max: 18 },
 ]
 
 const limits: Record<LayoutFontSizeArea, { min: number; max: number }> = {
   sidebar: { min: 12, max: 18 },
-  editor: { min: 14, max: 22 },
+  editor: { min: 12, max: 22 },
   outline: { min: 12, max: 18 },
 }
 
