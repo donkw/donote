@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Search } from '@lucide/vue'
+import {
+  ChevronDown,
+  ChevronRight,
+  FilePlus2,
+  FileText,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  Search,
+} from '@lucide/vue'
 import { ElEmpty, ElInput, ElScrollbar, ElTree } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { main } from '../../wailsjs/go/models'
@@ -221,6 +230,33 @@ function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
 <template>
   <aside class="sidebar workspace-sidebar">
     <div class="sidebar-header">
+      <div v-if="workspaceName || tree.length" class="workspace-sidebar__top">
+        <p class="workspace-title">
+          <span>{{ workspaceName }}</span>
+        </p>
+        <div class="workspace-actions" aria-label="工作区操作">
+          <button
+            data-test="new-note"
+            class="workspace-action-button"
+            type="button"
+            aria-label="新建笔记"
+            title="新建笔记"
+            @click="$emit('create-markdown', '')"
+          >
+            <FilePlus2 :size="15" />
+          </button>
+          <button
+            data-test="new-folder"
+            class="workspace-action-button"
+            type="button"
+            aria-label="新建文件夹"
+            title="新建文件夹"
+            @click="$emit('create-folder', '')"
+          >
+            <FolderPlus :size="15" />
+          </button>
+        </div>
+      </div>
       <div v-if="workspaceName || tree.length" data-test="file-tree-search" class="file-tree-search">
         <ElInput
           v-model="fileTreeQuery"
