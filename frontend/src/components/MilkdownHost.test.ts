@@ -1,6 +1,11 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { editorViewCtx } from '@milkdown/kit/core'
+import { Schema, type Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
+import { EditorState, TextSelection, type Transaction } from '@milkdown/kit/prose/state'
 import { describe, expect, test, vi } from 'vitest'
 import MilkdownHost from './MilkdownHost.vue'
+
+const editorAction = vi.hoisted(() => vi.fn())
 
 vi.mock('@milkdown/vue', () => ({
   Milkdown: {
@@ -10,10 +15,35 @@ vi.mock('@milkdown/vue', () => ({
   },
   useEditor: () => ({
     get: () => ({
-      action: vi.fn(),
+      action: editorAction,
     }),
   }),
 }))
+
+const schema = new Schema({
+  nodes: {
+    doc: { content: 'block+' },
+    paragraph: {
+      content: 'text*',
+      group: 'block',
+      parseDOM: [{ tag: 'p' }],
+      toDOM: () => ['p', 0],
+    },
+    bullet_list: {
+      content: 'list_item+',
+      group: 'block',
+      parseDOM: [{ tag: 'ul' }],
+      toDOM: () => ['ul', 0],
+    },
+    list_item: {
+      content: 'paragraph block*',
+      defining: true,
+      parseDOM: [{ tag: 'li' }],
+      toDOM: () => ['li', 0],
+    },
+    text: { group: 'inline' },
+  },
+})
 
 async function waitForAssertion(assertion: () => void) {
   let lastError: unknown
@@ -59,7 +89,100 @@ function mockRect(element: Element, rect: Partial<DOMRect>) {
   )
 }
 
+function paragraph(text: string) {
+  return schema.node('paragraph', null, schema.text(text))
+}
+
+function listItem(content: ProseMirrorNode[]) {
+  return schema.node('list_item', null, content)
+}
+
+function textPosition(doc: ProseMirrorNode, text: string) {
+  let found = -1
+  doc.descendants((node, position) => {
+    if (node.isText && node.text === text) {
+      found = position
+      return false
+    }
+    return true
+  })
+  if (found < 0) {
+    throw new Error(`Text not found: ${text}`)
+  }
+  return found
+}
+
+function nestedListEditorState() {
+  const doc = schema.node('doc', null, [
+    schema.node('bullet_list', null, [
+      listItem([
+        paragraph('Parent'),
+        schema.node('bullet_list', null, [listItem([paragraph('Child')])]),
+      ]),
+    ]),
+  ])
+  return EditorState.create({
+    doc,
+    selection: TextSelection.create(doc, textPosition(doc, 'Child') + 1),
+  })
+}
+
 describe('MilkdownHost', () => {
+  test('captures Shift+Tab in a list item and dispatches a list outdent before focus can move', async () => {
+    const state = nestedListEditorState()
+    const editorView = {
+      state,
+      dispatchedTransactions: [] as Transaction[],
+      dispatch(transaction: Transaction) {
+        this.dispatchedTransactions.push(transaction)
+      },
+    }
+    editorAction.mockImplementation((callback) => {
+      callback({
+        get: (key: unknown) => {
+          if (key === editorViewCtx) {
+            return editorView
+          }
+          throw new Error('Unexpected editor context key')
+        },
+      })
+    })
+
+    const wrapper = mount(MilkdownHost, {
+      props: {
+        modelValue: '- Parent\n  - Child',
+        activePath: 'notes/intro.md',
+      },
+    })
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    wrapper.element.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(editorView.dispatchedTransactions).toHaveLength(1)
+
+    const nextState = state.apply(editorView.dispatchedTransactions[0])
+    expect(nextState.doc.toJSON()).toMatchObject({
+      content: [
+        {
+          type: 'bullet_list',
+          content: [
+            { type: 'list_item' },
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Child' }] }],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
   test('resolves relative workspace image sources for display', async () => {
     const resolveImageSource = vi.fn().mockResolvedValue('data:image/png;base64,aW1hZ2U=')
 

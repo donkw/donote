@@ -39,6 +39,18 @@ describe('editor layout styles', () => {
   test('reserves vertical scrollbar space in the editor scroll container', () => {
     expect(cssBlock('.milkdown-shell')).toMatch(/scrollbar-gutter:\s*stable\b/)
   })
+
+  test('reveals markdown block markers only on the active editor line', () => {
+    const markerBlock = cssBlock(
+      '.milkdown-editor .ProseMirror .donote-active-markdown-line[data-donote-markdown-prefix]::before',
+    )
+    const listBlock = cssBlock('.milkdown-editor .ProseMirror li.donote-active-markdown-line')
+
+    expect(markerBlock).toMatch(/content:\s*attr\(data-donote-markdown-prefix\)/)
+    expect(markerBlock).toMatch(/position:\s*absolute\b/)
+    expect(markerBlock).toMatch(/color:\s*var\(--text-subtle\)/)
+    expect(listBlock).toMatch(/list-style:\s*none\b/)
+  })
 })
 
 describe('Obsidian dark shell styles', () => {

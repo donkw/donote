@@ -752,6 +752,30 @@ textarea:focus-visible {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent), transparent 28%);
 }
 
+.milkdown-editor .ProseMirror .donote-active-markdown-line[data-donote-markdown-prefix] {
+  position: relative;
+}
+
+.milkdown-editor .ProseMirror .donote-active-markdown-line[data-donote-markdown-prefix]::before {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 8px);
+  color: var(--text-subtle);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.88em;
+  font-weight: 650;
+  line-height: inherit;
+  white-space: pre;
+  content: attr(data-donote-markdown-prefix);
+  pointer-events: none;
+}
+
+.milkdown-editor .ProseMirror li.donote-active-markdown-line {
+  list-style: none;
+}
+
 .image-resize-handle {
   position: absolute;
   z-index: 8;

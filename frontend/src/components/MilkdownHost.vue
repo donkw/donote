@@ -6,7 +6,7 @@
     @cut.capture="markUserMarkdownInput"
     @drop.capture="markUserMarkdownInput"
     @input.capture="markUserMarkdownInput"
-    @keydown.capture="markUserMarkdownInput"
+    @keydown.capture="handleHostKeydown"
     @paste.capture="markUserMarkdownInput"
     @pointerdown.capture="handleHostPointerDown"
   >
@@ -35,6 +35,12 @@ import { gfm } from '@milkdown/kit/preset/gfm'
 import { replaceAll } from '@milkdown/kit/utils'
 import { Milkdown, useEditor } from '@milkdown/vue'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  createActiveMarkdownLinePlugin,
+  isListOutdentShortcut,
+  isSelectionInListItem,
+  outdentCurrentListItemInView,
+} from '../lib/activeMarkdownLine'
 import {
   createSearchHighlightPlugin,
   searchHighlightPluginKey,
@@ -91,6 +97,7 @@ const editor = useEditor((root) =>
       ctx.update(prosePluginsCtx, (plugins) => [
         ...plugins,
         createSearchHighlightPlugin(currentSearchHighlightState()),
+        createActiveMarkdownLinePlugin(),
       ])
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
         if (!hasUserMarkdownInput) {
@@ -266,6 +273,40 @@ function markUserMarkdownInput(event: Event) {
     return
   }
   hasUserMarkdownInput = true
+}
+
+function handleHostKeydown(event: KeyboardEvent) {
+  markUserMarkdownInput(event)
+  if (!isListOutdentShortcut(event)) {
+    return
+  }
+
+  const result = outdentActiveListItem()
+  if (!result.inListItem && !result.outdented) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function outdentActiveListItem() {
+  const result = {
+    inListItem: false,
+    outdented: false,
+  }
+
+  editor.get()?.action((ctx) => {
+    try {
+      const view = ctx.get(editorViewCtx)
+      result.inListItem = isSelectionInListItem(view.state)
+      result.outdented = outdentCurrentListItemInView(view)
+    } catch {
+      // The editor view is not available during early setup.
+    }
+  })
+
+  return result
 }
 
 function isMarkdownEditingKey(event: KeyboardEvent) {
