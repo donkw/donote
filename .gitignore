@@ -24,6 +24,7 @@ frontend/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+frontend/package.json.md5
 
 # Environment and editor files
 .env
