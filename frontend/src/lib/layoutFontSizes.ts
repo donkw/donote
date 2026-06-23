@@ -1,7 +1,8 @@
-export type LayoutFontSizeArea = 'sidebar' | 'editor' | 'outline'
+export type LayoutFontSizeArea = 'sidebar' | 'tabs' | 'editor' | 'outline'
 
 export interface LayoutFontSizes {
   sidebar: number
+  tabs: number
   editor: number
   outline: number
 }
@@ -10,6 +11,7 @@ export const layoutFontSizeStorageKey = 'donote.layoutFontSizes'
 
 export const defaultLayoutFontSizes: LayoutFontSizes = {
   sidebar: 13,
+  tabs: 13,
   editor: 17,
   outline: 13,
 }
@@ -20,15 +22,17 @@ export const layoutFontSizeControls: Array<{
   min: number
   max: number
 }> = [
-  { key: 'sidebar', label: '左侧目录栏', min: 12, max: 18 },
-  { key: 'editor', label: '中间编辑区', min: 12, max: 22 },
-  { key: 'outline', label: '右侧大纲栏', min: 12, max: 18 },
+  { key: 'sidebar', label: '左侧目录栏', min: 10, max: 18 },
+  { key: 'tabs', label: '文档标签栏', min: 10, max: 16 },
+  { key: 'editor', label: '中间编辑区', min: 10, max: 22 },
+  { key: 'outline', label: '右侧大纲栏', min: 10, max: 18 },
 ]
 
 const limits: Record<LayoutFontSizeArea, { min: number; max: number }> = {
-  sidebar: { min: 12, max: 18 },
-  editor: { min: 12, max: 22 },
-  outline: { min: 12, max: 18 },
+  sidebar: { min: 10, max: 18 },
+  tabs: { min: 10, max: 16 },
+  editor: { min: 10, max: 22 },
+  outline: { min: 10, max: 18 },
 }
 
 export function getInitialLayoutFontSizes(
@@ -61,8 +65,13 @@ export function normalizeLayoutFontSizes(value: unknown): LayoutFontSizes {
   }
 
   const next = {} as LayoutFontSizes
+  const canMigrateTabs = ['sidebar', 'editor', 'outline'].every((key) => isFiniteNumber(value[key]))
   for (const control of layoutFontSizeControls) {
     const raw = value[control.key]
+    if (raw === undefined && control.key === 'tabs' && canMigrateTabs) {
+      next[control.key] = defaultLayoutFontSizes[control.key]
+      continue
+    }
     if (typeof raw !== 'number' || !Number.isFinite(raw)) {
       return { ...defaultLayoutFontSizes }
     }
@@ -78,4 +87,8 @@ function clamp(value: number, min: number, max: number): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
 }

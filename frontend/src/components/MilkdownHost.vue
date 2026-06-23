@@ -24,7 +24,15 @@
 </template>
 
 <script setup lang="ts">
-import { defaultValueCtx, Editor, editorViewCtx, prosePluginsCtx, rootCtx } from '@milkdown/kit/core'
+import {
+  defaultValueCtx,
+  Editor,
+  editorViewCtx,
+  prosePluginsCtx,
+  rootCtx,
+  serializerCtx,
+} from '@milkdown/kit/core'
+import type { Ctx } from '@milkdown/kit/ctx'
 import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { cursor } from '@milkdown/kit/plugin/cursor'
 import { history } from '@milkdown/kit/plugin/history'
@@ -70,6 +78,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
+  (event: 'sync-clean-content', value: string): void
 }>()
 
 let lastMarkdown = props.modelValue
@@ -114,6 +123,9 @@ const editor = useEditor((root) =>
         }
         lastMarkdown = restoredMarkdown
         emit('update:modelValue', restoredMarkdown)
+      })
+      ctx.get(listenerCtx).mounted((ctx) => {
+        syncCleanMarkdownBaseline(ctx)
       })
     })
     .use(commonmark)
@@ -512,12 +524,37 @@ function escapeMarkdownTitle(value: string) {
   return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')
 }
 
+function syncCleanMarkdownBaseline(ctx?: Ctx) {
+  if (ctx) {
+    emitCleanMarkdownBaseline(ctx)
+    return
+  }
+  editor.get()?.action(emitCleanMarkdownBaseline)
+}
+
+function emitCleanMarkdownBaseline(ctx: Ctx) {
+  const view = ctx.get(editorViewCtx)
+  const markdown = restoreResolvedImageSources(
+    ctx.get(serializerCtx)(view.state.doc),
+    props.modelValue,
+    props.activePath,
+    resolvedImageSourceCache,
+  )
+  if (markdown === lastMarkdown) {
+    return
+  }
+  lastMarkdown = markdown
+  hasUserMarkdownInput = false
+  emit('sync-clean-content', markdown)
+}
+
 watch(
   () => props.activePath,
   () => {
     lastMarkdown = props.modelValue
     hasUserMarkdownInput = false
     editor.get()?.action(replaceAll(props.modelValue, true))
+    syncCleanMarkdownBaseline()
     updateSearchHighlights()
     void resolveWorkspaceImages()
   },

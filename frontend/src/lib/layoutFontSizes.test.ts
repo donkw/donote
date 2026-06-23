@@ -34,25 +34,62 @@ describe('layout font sizes', () => {
     const storage = createStorage(
       JSON.stringify({
         sidebar: 8,
+        tabs: 9,
         editor: 20,
         outline: 30,
       }),
     )
 
     expect(getInitialLayoutFontSizes(storage)).toEqual({
-      sidebar: 12,
+      sidebar: 10,
+      tabs: 10,
       editor: 20,
       outline: 18,
     })
   })
 
-  test('supports smaller editor font sizes down to 12 pixels', () => {
-    const editorControl = layoutFontSizeControls.find((control) => control.key === 'editor')
+  test('migrates saved settings from before tabs had a separate font size', () => {
+    const storage = createStorage(
+      JSON.stringify({
+        sidebar: 14,
+        editor: 19,
+        outline: 15,
+      }),
+    )
 
-    expect(editorControl?.min).toBe(12)
-    expect(normalizeLayoutFontSizes({ sidebar: 13, editor: 10, outline: 13 })).toEqual({
+    expect(getInitialLayoutFontSizes(storage)).toEqual({
+      sidebar: 14,
+      tabs: 13,
+      editor: 19,
+      outline: 15,
+    })
+  })
+
+  test('supports all layout font sizes down to 10 pixels', () => {
+    expect(layoutFontSizeControls.map((control) => [control.key, control.min])).toEqual([
+      ['sidebar', 10],
+      ['tabs', 10],
+      ['editor', 10],
+      ['outline', 10],
+    ])
+    expect(normalizeLayoutFontSizes({ sidebar: 8, tabs: 9, editor: 9, outline: 7 })).toEqual({
+      sidebar: 10,
+      tabs: 10,
+      editor: 10,
+      outline: 10,
+    })
+  })
+
+  test('supports document tab font sizes from 10 to 16 pixels', () => {
+    const tabsControl = layoutFontSizeControls.find((control) => control.key === 'tabs')
+
+    expect(tabsControl?.label).toBe('文档标签栏')
+    expect(tabsControl?.min).toBe(10)
+    expect(tabsControl?.max).toBe(16)
+    expect(normalizeLayoutFontSizes({ sidebar: 13, tabs: 20, editor: 17, outline: 13 })).toEqual({
       sidebar: 13,
-      editor: 12,
+      tabs: 16,
+      editor: 17,
       outline: 13,
     })
   })

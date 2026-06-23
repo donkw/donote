@@ -1,11 +1,6 @@
 <template>
   <MilkdownProvider>
     <div class="milkdown-shell" @paste.capture="handlePaste">
-      <FormatToolbar
-        class="editor-format-toolbar"
-        tooltip-placement="right"
-        @insert-markdown="$emit('insert-markdown', $event)"
-      />
       <div class="milkdown-editor">
         <MilkdownHost
           :active-path="activePath"
@@ -14,8 +9,14 @@
           :active-search-index="activeSearchIndex"
           :resolve-image-source="resolveImageSource"
           @update:model-value="emitUpdate"
+          @sync-clean-content="$emit('sync-clean-content', $event)"
         />
       </div>
+      <FormatToolbar
+        class="editor-format-toolbar"
+        tooltip-placement="left"
+        @insert-markdown="$emit('insert-markdown', $event)"
+      />
     </div>
   </MilkdownProvider>
 </template>
@@ -43,6 +44,7 @@ withDefaults(
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
+  (event: 'sync-clean-content', value: string): void
   (event: 'paste-files', files: File[]): void
   (event: 'insert-markdown', markdown: string): void
 }>()

@@ -4,7 +4,7 @@ export const themeStorageKey = 'donote.theme'
 
 export function getInitialTheme(storage: Storage | undefined = window.localStorage): ThemeMode {
   const stored = storage?.getItem(themeStorageKey)
-  return stored === 'dark' ? 'dark' : 'light'
+  return stored === 'light' ? 'light' : 'dark'
 }
 
 export function applyTheme(

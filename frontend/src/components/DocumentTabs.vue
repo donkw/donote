@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FileText, X } from '@lucide/vue'
 import { ElTabPane, ElTabs } from 'element-plus'
+import { isDocumentDirty } from '../lib/markdownDirty'
 import type { OpenDocument } from '../types/app'
 
 const props = defineProps<{
@@ -12,10 +13,6 @@ const emit = defineEmits<{
   (event: 'update:activePath', path: string): void
   (event: 'close', document: OpenDocument): void
 }>()
-
-function isDirty(document: OpenDocument): boolean {
-  return document.content.replace(/\s+$/g, '') !== document.savedContent.replace(/\s+$/g, '')
-}
 
 function handleTabChange(path: string | number) {
   emit('update:activePath', String(path))
@@ -35,7 +32,7 @@ function handleTabChange(path: string | number) {
         <span :data-test="`tab-${document.path}`" class="document-tab-label">
           <FileText :size="14" />
           <span>{{ document.name }}</span>
-          <span v-if="isDirty(document)" class="dirty-mark">*</span>
+          <span v-if="isDocumentDirty(document)" class="dirty-mark">*</span>
           <button
             class="tab-close-button"
             :data-test="`tab-close-${document.path}`"

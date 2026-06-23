@@ -20,8 +20,8 @@ import { EventsOn } from '../wailsjs/runtime/runtime'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
 import SearchPanel from './components/SearchPanel.vue'
+import CommandToolbar from './components/CommandToolbar.vue'
 import UtilityDrawer from './components/UtilityDrawer.vue'
-import UtilityRail from './components/UtilityRail.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
   getInitialAttachmentDirectories,
@@ -35,11 +35,10 @@ import {
 } from './lib/editorWidth'
 import {
   getInitialLayoutFontSizes,
-  normalizeLayoutFontSizes,
   saveLayoutFontSizes,
   type LayoutFontSizeArea,
-  type LayoutFontSizes,
 } from './lib/layoutFontSizes'
+import { isDocumentDirty } from './lib/markdownDirty'
 import {
   clearOpenDocumentSession,
   getInitialOpenDocumentSession,
@@ -71,12 +70,8 @@ const activeSearchIndex = ref(-1)
 const theme = ref<ThemeMode>(getInitialTheme())
 const loadingDocument = ref(false)
 const layoutFontSizes = ref(getInitialLayoutFontSizes())
-const draftLayoutFontSizes = ref<LayoutFontSizes>({ ...layoutFontSizes.value })
 const editorWidth = ref(getInitialEditorWidth())
-const draftEditorWidth = ref(editorWidth.value)
 const attachmentDirectories = ref(getInitialAttachmentDirectories())
-const draftAttachmentDirectories = ref<AttachmentDirectories>({ ...attachmentDirectories.value })
-const draftWorkspaceRoot = ref(workspace.value?.rootPath ?? '')
 const sidebarWidth = ref(getInitialSidebarWidth())
 const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
@@ -122,6 +117,7 @@ const activeFilePath = computed(() => activeDocument.value?.path ?? '')
 const layoutFontStyle = computed(() => ({
   '--sidebar-width': `${sidebarWidth.value}px`,
   '--sidebar-font-size': `${layoutFontSizes.value.sidebar}px`,
+  '--tabs-font-size': `${layoutFontSizes.value.tabs}px`,
   '--editor-font-size': `${layoutFontSizes.value.editor}px`,
   '--outline-font-size': `${layoutFontSizes.value.outline}px`,
   '--editor-content-width': `${editorWidth.value}px`,
@@ -219,7 +215,6 @@ async function restoreLastWorkspace(): Promise<boolean> {
 function applyWorkspaceInfo(info: main.WorkspaceInfo) {
   collapsedFolderPaths.value = new Set(getCollapsedFolderPaths(info.rootPath))
   workspace.value = info
-  draftWorkspaceRoot.value = info.rootPath
   openDocuments.value = []
   activeDocumentPath.value = ''
   searchQuery.value = ''
@@ -454,6 +449,16 @@ function insertMarkdown(markdown: string) {
   editorContent.value = `${editorContent.value}${spacer}${markdown}`
 }
 
+function syncActiveCleanContent(content: string) {
+  const document = activeDocument.value
+  if (!document || loadingDocument.value || isDocumentDirty(document)) {
+    return
+  }
+  document.content = content
+  document.savedContent = content
+  document.error = ''
+}
+
 async function resolveEditorImageSource(source: string, documentPath: string) {
   return ResolveImageSource(documentPath, source)
 }
@@ -535,66 +540,44 @@ function removeSidebarResizeListeners() {
   window.removeEventListener('pointercancel', finishSidebarResize)
 }
 
-function prepareUtilityPanel(panel: UtilityPanel) {
-  if (panel === 'settings') {
-    draftWorkspaceRoot.value = workspace.value?.rootPath ?? ''
-    draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-    draftEditorWidth.value = editorWidth.value
-    draftAttachmentDirectories.value = { ...attachmentDirectories.value }
-  }
-}
-
 function openUtilityPanel(panel: UtilityPanel) {
   activeUtilityPanel.value = panel
-  prepareUtilityPanel(panel)
   showUtilityDrawer.value = true
 }
 
 function toggleUtilityPanel(panel: UtilityPanel) {
   if (activeUtilityPanel.value === panel) {
-    const shouldOpen = !showUtilityDrawer.value
-    if (shouldOpen) {
-      prepareUtilityPanel(panel)
-    }
-    showUtilityDrawer.value = shouldOpen
+    showUtilityDrawer.value = !showUtilityDrawer.value
     return
   }
   openUtilityPanel(panel)
 }
 
-function closeSettings() {
-  draftWorkspaceRoot.value = workspace.value?.rootPath ?? ''
-  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  draftEditorWidth.value = editorWidth.value
-  draftAttachmentDirectories.value = { ...attachmentDirectories.value }
-  showUtilityDrawer.value = false
-}
-
-function setDraftLayoutFontSize(area: LayoutFontSizeArea, value: number) {
-  draftLayoutFontSizes.value = normalizeLayoutFontSizes({
-    ...draftLayoutFontSizes.value,
+function setLayoutFontSize(area: LayoutFontSizeArea, value: number) {
+  layoutFontSizes.value = saveLayoutFontSizes({
+    ...layoutFontSizes.value,
     [area]: value,
   })
 }
 
-function setDraftEditorWidth(value: number) {
-  draftEditorWidth.value = normalizeEditorWidth(value)
+function setEditorWidth(value: number) {
+  editorWidth.value = saveEditorWidth(normalizeEditorWidth(value))
 }
 
-function setDraftAttachmentDirectory(key: keyof AttachmentDirectories, value: string) {
-  draftAttachmentDirectories.value = {
-    ...draftAttachmentDirectories.value,
+function setAttachmentDirectory(key: keyof AttachmentDirectories, value: string) {
+  attachmentDirectories.value = saveAttachmentDirectories({
+    ...attachmentDirectories.value,
     [key]: value,
-  }
+  })
 }
 
-async function selectDraftAttachmentDirectory(key: keyof AttachmentDirectories) {
+async function selectAttachmentDirectory(key: keyof AttachmentDirectories) {
   try {
     const selected = await SelectAttachmentDirectory(key)
     if (!selected) {
       return
     }
-    setDraftAttachmentDirectory(key, selected)
+    setAttachmentDirectory(key, selected)
   } catch (error) {
     setError(error)
   }
@@ -604,10 +587,7 @@ async function selectWorkspaceFromSettings() {
   if (!(await confirmWorkspaceSwitchIfDirty())) {
     return
   }
-  const selected = await openWorkspace()
-  if (selected) {
-    draftWorkspaceRoot.value = selected.rootPath
-  }
+  await openWorkspace()
 }
 
 async function confirmWorkspaceSwitchIfDirty(): Promise<boolean> {
@@ -625,17 +605,6 @@ async function confirmWorkspaceSwitchIfDirty(): Promise<boolean> {
   } catch {
     return false
   }
-}
-
-function saveSettings() {
-  draftWorkspaceRoot.value = workspace.value?.rootPath ?? ''
-  layoutFontSizes.value = saveLayoutFontSizes(draftLayoutFontSizes.value)
-  draftLayoutFontSizes.value = { ...layoutFontSizes.value }
-  editorWidth.value = saveEditorWidth(draftEditorWidth.value)
-  draftEditorWidth.value = editorWidth.value
-  attachmentDirectories.value = saveAttachmentDirectories(draftAttachmentDirectories.value)
-  draftAttachmentDirectories.value = { ...attachmentDirectories.value }
-  showUtilityDrawer.value = false
 }
 
 function goToNextMatch() {
@@ -687,16 +656,8 @@ async function closeDocument(document: OpenDocument) {
   persistOpenDocumentSession()
 }
 
-function isDocumentDirty(document: OpenDocument): boolean {
-  return normalizeMarkdownForDirtyCheck(document.content) !== normalizeMarkdownForDirtyCheck(document.savedContent)
-}
-
 function hasDirtyDocuments(): boolean {
   return openDocuments.value.some(isDocumentDirty)
-}
-
-function normalizeMarkdownForDirtyCheck(content: string): string {
-  return content.replace(/\s+$/g, '')
 }
 
 function createOpenDocument(document: main.Document): OpenDocument {
@@ -915,6 +876,18 @@ function setError(error: unknown) {
       {{ errorMessage || activeDocument?.error }}
     </div>
 
+    <CommandToolbar
+      :active-panel="activeUtilityPanel"
+      :drawer-open="showUtilityDrawer"
+      :theme="theme"
+      :save-state="activeSaveState"
+      :search-open="showEditorSearch"
+      @select="toggleUtilityPanel"
+      @search="toggleEditorSearch"
+      @save="flushSave"
+      @toggle-theme="switchTheme"
+    />
+
     <div
       data-test="workspace-layout"
       class="workspace-layout"
@@ -971,38 +944,26 @@ function setError(error: unknown) {
           :search-query="searchQuery"
           :active-search-index="activeSearchIndex"
           :resolve-image-source="resolveEditorImageSource"
+          @sync-clean-content="syncActiveCleanContent"
           @paste-files="handlePasteFiles"
           @insert-markdown="insertMarkdown"
         />
       </main>
 
-      <UtilityRail
-        :active-panel="activeUtilityPanel"
-        :drawer-open="showUtilityDrawer"
-        :theme="theme"
-        :save-state="activeSaveState"
-        :search-open="showEditorSearch"
-        @select="toggleUtilityPanel"
-        @search="toggleEditorSearch"
-        @save="flushSave"
-        @toggle-theme="switchTheme"
-      />
       <UtilityDrawer
         v-model="showUtilityDrawer"
         :active-panel="activeUtilityPanel"
         :outline="outline"
         :outline-font-size="layoutFontSizes.outline"
-        :workspace-root="draftWorkspaceRoot"
-        :draft-layout-font-sizes="draftLayoutFontSizes"
-        :draft-editor-width="draftEditorWidth"
-        :draft-attachment-directories="draftAttachmentDirectories"
-        @update-font-size="setDraftLayoutFontSize"
-        @update-editor-width="setDraftEditorWidth"
-        @update-attachment-directory="setDraftAttachmentDirectory"
-        @select-attachment-directory="selectDraftAttachmentDirectory"
+        :workspace-root="workspace?.rootPath ?? ''"
+        :layout-font-sizes="layoutFontSizes"
+        :editor-width="editorWidth"
+        :attachment-directories="attachmentDirectories"
+        @update-font-size="setLayoutFontSize"
+        @update-editor-width="setEditorWidth"
+        @update-attachment-directory="setAttachmentDirectory"
+        @select-attachment-directory="selectAttachmentDirectory"
         @select-workspace="selectWorkspaceFromSettings"
-        @cancel-settings="closeSettings"
-        @save-settings="saveSettings"
       />
     </div>
   </div>

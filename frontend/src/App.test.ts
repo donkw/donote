@@ -20,6 +20,7 @@ import {
 } from '../wailsjs/go/main/App'
 
 let emitInitialMarkdown: ((value: string) => string) | null = null
+let emitInitialCleanMarkdown: ((value: string) => string) | null = null
 const elementPlusMocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   prompt: vi.fn(),
@@ -83,9 +84,16 @@ vi.mock('./components/MilkdownEditor.vue', () => ({
       searchQuery: { type: String, default: '' },
       activeSearchIndex: { type: Number, default: -1 },
     },
-    emits: ['update:modelValue', 'paste-files', 'insert-markdown'],
+    emits: ['update:modelValue', 'paste-files', 'insert-markdown', 'sync-clean-content'],
     setup(props, { emit }) {
       onMounted(() => {
+        if (emitInitialCleanMarkdown) {
+          window.setTimeout(() => {
+            if (emitInitialCleanMarkdown) {
+              emit('sync-clean-content', emitInitialCleanMarkdown(props.modelValue as string))
+            }
+          }, 0)
+        }
         if (emitInitialMarkdown) {
           window.setTimeout(() => {
             if (emitInitialMarkdown) {
@@ -162,6 +170,7 @@ describe('App shell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     emitInitialMarkdown = null
+    emitInitialCleanMarkdown = null
     runtimeMocks.events.clear()
     window.localStorage.clear()
     elementPlusMocks.confirm.mockResolvedValue('confirm')
@@ -203,11 +212,13 @@ describe('App shell', () => {
     expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('D:/notes')
   })
 
-  test('renders the editor workspace without a top header', () => {
+  test('renders the dark command workspace shell without the permanent utility rail', () => {
     const wrapper = mount(App)
 
     expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="command-toolbar"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
+    expect(wrapper.find('.utility-rail').exists()).toBe(false)
     expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="theme-toggle"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="save-now"]').exists()).toBe(true)
@@ -540,6 +551,89 @@ describe('App shell', () => {
     expect(SaveMarkdown).toHaveBeenCalledWith('intro.md', '# Changed')
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
     vi.useRealTimers()
+  })
+
+  test('clears dirty state when undo returns Milkdown-normalized original markdown', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro\r\n\r\n* item',
+    })
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('.mock-editor').setValue('# Changed')
+    await flushPromises()
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
+
+    await wrapper.get('.mock-editor').setValue('# Intro\n\n- item')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
+  })
+
+  test('uses editor clean markdown normalization as the saved baseline', async () => {
+    emitInitialCleanMarkdown = () => '# Intro normalized'
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro raw',
+    })
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    await flushPromises()
+
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe(
+      '# Intro normalized',
+    )
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
+
+    await wrapper.get('.mock-editor').setValue('# Changed')
+    await flushPromises()
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
+    expect(wrapper.find('.command-status').exists()).toBe(false)
+
+    wrapper.getComponent({ name: 'MilkdownEditor' }).vm.$emit('sync-clean-content', '# Changed')
+    await flushPromises()
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
+    expect(wrapper.find('.command-status').exists()).toBe(false)
+
+    await wrapper.get('.mock-editor').setValue('# Intro normalized')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
+    expect(wrapper.find('.command-status').exists()).toBe(false)
   })
 
   test('does not implicitly save dirty content when opening another tab', async () => {
@@ -1194,12 +1288,13 @@ describe('App shell', () => {
     expect(ResolveImageSource).toHaveBeenCalledWith('intro.md', 'assets/images/photo.png')
   })
 
-  test('applies layout settings only after saving the settings dialog', async () => {
+  test('applies settings immediately from the settings dialog', async () => {
     const wrapper = mount(App)
 
     const initialStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
     expect(initialStyle).toContain('--sidebar-width: 286px')
     expect(initialStyle).toContain('--sidebar-font-size: 13px')
+    expect(initialStyle).toContain('--tabs-font-size: 13px')
     expect(initialStyle).toContain('--editor-font-size: 17px')
     expect(initialStyle).toContain('--outline-font-size: 13px')
     expect(initialStyle).toContain('--editor-content-width: 900px')
@@ -1209,38 +1304,31 @@ describe('App shell', () => {
     expect(wrapper.find('[data-test="settings-page"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="search-input"]').exists()).toBe(false)
     expect(wrapper.find('.utility-drawer [data-test="search-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="settings-save"]').exists()).toBe(false)
+    expect(wrapper.find('.settings-actions').exists()).toBe(false)
     expect(wrapper.text()).toContain('布局字体大小')
-    await wrapper.get('[data-test="font-size-sidebar"] input').setValue(12)
-    await wrapper.get('[data-test="font-size-editor"] input').setValue(12)
-    await wrapper.get('[data-test="font-size-outline"] input').setValue(14)
+    await wrapper.get('[data-test="font-size-sidebar"] input').setValue(10)
+    await wrapper.get('[data-test="font-size-tabs"] input').setValue(10)
+    await wrapper.get('[data-test="font-size-editor"] input').setValue(10)
+    await wrapper.get('[data-test="font-size-outline"] input').setValue(10)
     await wrapper.get('[data-test="editor-width"] input').setValue(1100)
     await wrapper.get('[data-test="attachment-image-dir"]').setValue('assets/images')
     await wrapper.get('[data-test="attachment-file-dir"]').setValue('assets/files')
 
-    const stagedStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
-    expect(stagedStyle).toContain('--sidebar-font-size: 13px')
-    expect(stagedStyle).toContain('--editor-font-size: 17px')
-    expect(stagedStyle).toContain('--outline-font-size: 13px')
-    expect(stagedStyle).toContain('--editor-content-width: 900px')
-    expect(window.localStorage.getItem('donote.layoutFontSizes')).toBeNull()
-    expect(window.localStorage.getItem('donote.editorWidth')).toBeNull()
-    expect(window.localStorage.getItem('donote.attachmentDirectories')).toBeNull()
-
-    await wrapper.get('[data-test="settings-save"]').trigger('click')
-
     const layoutStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
-    expect(layoutStyle).toContain('--sidebar-font-size: 12px')
-    expect(layoutStyle).toContain('--editor-font-size: 12px')
-    expect(layoutStyle).toContain('--outline-font-size: 14px')
+    expect(layoutStyle).toContain('--sidebar-font-size: 10px')
+    expect(layoutStyle).toContain('--tabs-font-size: 10px')
+    expect(layoutStyle).toContain('--editor-font-size: 10px')
+    expect(layoutStyle).toContain('--outline-font-size: 10px')
     expect(layoutStyle).toContain('--editor-content-width: 1100px')
     expect(window.localStorage.getItem('donote.layoutFontSizes')).toBe(
-      '{"sidebar":12,"editor":12,"outline":14}',
+      '{"sidebar":10,"tabs":10,"editor":10,"outline":10}',
     )
     expect(window.localStorage.getItem('donote.editorWidth')).toBe('1100')
     expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(
       '{"images":"assets/images","files":"assets/files"}',
     )
-    expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(true)
   })
 
   test('shows and switches the current workspace from settings', async () => {
@@ -1402,8 +1490,6 @@ describe('App shell', () => {
     expect((wrapper.get('[data-test="attachment-file-dir"]').element as HTMLInputElement).value).toBe(
       'assets/files',
     )
-
-    await wrapper.get('[data-test="settings-save"]').trigger('click')
 
     expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(
       '{"images":"assets/images","files":"assets/files"}',

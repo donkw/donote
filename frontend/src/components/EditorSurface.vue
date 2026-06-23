@@ -21,6 +21,7 @@ withDefaults(
 
 defineEmits<{
   (event: 'update:modelValue', value: string): void
+  (event: 'sync-clean-content', value: string): void
   (event: 'paste-files', files: File[]): void
   (event: 'insert-markdown', markdown: string): void
 }>()
@@ -36,6 +37,7 @@ defineEmits<{
         :active-search-index="activeSearchIndex"
         :resolve-image-source="resolveImageSource"
         @update:model-value="$emit('update:modelValue', $event)"
+        @sync-clean-content="$emit('sync-clean-content', $event)"
         @paste-files="$emit('paste-files', $event)"
         @insert-markdown="$emit('insert-markdown', $event)"
       />

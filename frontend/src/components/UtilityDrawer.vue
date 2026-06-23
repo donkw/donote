@@ -13,9 +13,9 @@ const props = defineProps<{
   outline: OutlineItem[]
   outlineFontSize: number
   workspaceRoot: string
-  draftLayoutFontSizes: LayoutFontSizes
-  draftEditorWidth: number
-  draftAttachmentDirectories: AttachmentDirectories
+  layoutFontSizes: LayoutFontSizes
+  editorWidth: number
+  attachmentDirectories: AttachmentDirectories
 }>()
 
 const emit = defineEmits<{
@@ -25,8 +25,6 @@ const emit = defineEmits<{
   (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
   (event: 'select-attachment-directory', key: keyof AttachmentDirectories): void
   (event: 'select-workspace'): void
-  (event: 'cancel-settings'): void
-  (event: 'save-settings'): void
 }>()
 
 const titles: Record<UtilityPanel, string> = {
@@ -73,17 +71,15 @@ function emitSelectWorkspace() {
     />
     <SettingsPanel
       v-else
-      :model-value="draftLayoutFontSizes"
+      :model-value="layoutFontSizes"
       :workspace-root="workspaceRoot"
-      :editor-width="draftEditorWidth"
-      :attachment-directories="draftAttachmentDirectories"
+      :editor-width="editorWidth"
+      :attachment-directories="attachmentDirectories"
       @update-font-size="emitFontSize"
       @update-editor-width="emitEditorWidth"
       @update-attachment-directory="emitAttachmentDirectory"
       @select-attachment-directory="emitSelectAttachmentDirectory"
       @select-workspace="emitSelectWorkspace"
-      @cancel="$emit('cancel-settings')"
-      @save="$emit('save-settings')"
     />
   </ElDrawer>
 </template>

@@ -9,6 +9,7 @@
   --app-bg: #f4f6f8;
   --surface: #ffffff;
   --surface-muted: #f8fafc;
+  --surface-raised: #ffffff;
   --border: #dfe5ec;
   --text: #1f2937;
   --text-muted: #5f6b7a;
@@ -41,31 +42,31 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  color: #d8dee9;
-  background: #11151c;
-  --app-bg: #11151c;
-  --surface: #202632;
-  --surface-muted: #161a22;
-  --surface-raised: #252d3a;
-  --border: #2b3240;
-  --text: #d8dee9;
-  --text-muted: #9aa7bc;
-  --text-subtle: #6e7a90;
-  --accent: #7ea7ff;
-  --accent-soft: #2b3a56;
-  --accent-strong: #d9e7ff;
-  --danger: #ff8a80;
-  --warning: #f2bd66;
+  color: #f0e9df;
+  background: #1c1b1a;
+  --app-bg: #1c1b1a;
+  --surface: #23211f;
+  --surface-muted: #181716;
+  --surface-raised: #2a2724;
+  --border: #34302b;
+  --text: #f0e9df;
+  --text-muted: #a69b8e;
+  --text-subtle: #746b62;
+  --accent: #b97855;
+  --accent-soft: #33231d;
+  --accent-strong: #d8a184;
+  --danger: #f08c7f;
+  --warning: #e7b95a;
   --shadow-soft: 0 20px 48px rgba(0, 0, 0, 0.34);
   --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --focus-ring: 0 0 0 3px rgba(126, 167, 255, 0.24);
+  --focus-ring: 0 0 0 3px rgba(185, 120, 85, 0.18);
   --el-color-primary: var(--accent);
-  --el-color-primary-light-3: #a9c5ff;
-  --el-color-primary-light-5: #6f8ed1;
-  --el-color-primary-light-7: #344665;
-  --el-color-primary-light-8: #2b3a56;
-  --el-color-primary-light-9: #223047;
-  --el-color-primary-dark-2: #b7cdff;
+  --el-color-primary-light-3: #c98d68;
+  --el-color-primary-light-5: #b97855;
+  --el-color-primary-light-7: #704832;
+  --el-color-primary-light-8: #4d3024;
+  --el-color-primary-light-9: #33231d;
+  --el-color-primary-dark-2: #e0b090;
   --el-text-color-primary: var(--text);
   --el-text-color-regular: var(--text-muted);
   --el-text-color-secondary: var(--text-subtle);
@@ -78,7 +79,7 @@
   --el-fill-color-blank: var(--surface);
   --el-bg-color: var(--surface);
   --el-bg-color-overlay: var(--surface-raised);
-  --el-mask-color: rgba(5, 8, 13, 0.64);
+  --el-mask-color: rgba(12, 10, 9, 0.66);
 }
 
 * {
@@ -140,10 +141,10 @@ textarea:focus-visible {
   --el-button-active-text-color: var(--app-bg);
   --el-button-bg-color: var(--accent);
   --el-button-border-color: var(--accent);
-  --el-button-hover-bg-color: #a9c5ff;
-  --el-button-hover-border-color: #a9c5ff;
-  --el-button-active-bg-color: #6f8ed1;
-  --el-button-active-border-color: #6f8ed1;
+  --el-button-hover-bg-color: #c98d68;
+  --el-button-hover-border-color: #c98d68;
+  --el-button-active-bg-color: #9d6244;
+  --el-button-active-border-color: #9d6244;
   color: var(--app-bg);
 }
 
@@ -207,11 +208,91 @@ textarea:focus-visible {
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   width: 100%;
   height: 100vh;
   overflow: hidden;
   background: var(--app-bg);
+}
+
+.command-toolbar {
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 40px;
+  gap: 10px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.command-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--app-bg);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.command-brand__copy {
+  min-width: 0;
+}
+
+.command-brand__name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-toolbar__spacer {
+  min-width: 0;
+}
+
+.command-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 6px;
+}
+
+.command-toolbar .el-button:not(.is-text) {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  border-color: var(--border);
+  border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.command-toolbar .el-button:not(.is-disabled):not([disabled]):not(.is-text):hover,
+.command-toolbar .el-button:not(.is-disabled):not([disabled]):not(.is-text):focus-visible,
+.command-toolbar .el-button.el-button--primary:not(.is-disabled):not([disabled]):not(.is-text) {
+  border-color: color-mix(in srgb, var(--accent), transparent 38%);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .toolbar-group,
@@ -281,15 +362,15 @@ textarea:focus-visible {
 }
 
 .workspace-layout {
-  grid-row: 2;
+  grid-row: 3;
   display: grid;
-  grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr) var(--rail-width);
+  grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
 }
 
 .workspace-layout.without-sidebar {
-  grid-template-columns: minmax(0, 1fr) var(--rail-width);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .workspace-sidebar,
@@ -302,6 +383,7 @@ textarea:focus-visible {
   overflow: hidden;
   border-right: 1px solid var(--border);
   background: var(--surface-muted);
+  --el-font-size-base: var(--sidebar-font-size, 13px);
   font-size: var(--sidebar-font-size, 13px);
 }
 
@@ -550,6 +632,7 @@ textarea:focus-visible {
   grid-row: 1;
   min-width: 0;
   min-height: 40px;
+  --el-font-size-base: var(--tabs-font-size, 13px);
   background: var(--surface-muted);
 }
 
@@ -576,7 +659,7 @@ textarea:focus-visible {
   border-radius: 8px 8px 0 0;
   background: color-mix(in srgb, var(--surface-muted), var(--app-bg) 18%);
   color: var(--text-subtle);
-  font-size: 13px;
+  font-size: var(--tabs-font-size, 13px);
   font-weight: 700;
   letter-spacing: 0;
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--border), transparent 32%);
@@ -682,7 +765,7 @@ textarea:focus-visible {
 
 .milkdown-shell {
   display: grid;
-  grid-template-columns: 40px minmax(0, min(var(--editor-content-width, 900px), calc(100% - 52px)));
+  grid-template-columns: minmax(0, min(var(--editor-content-width, 900px), calc(100% - 52px))) 40px;
   align-items: start;
   justify-content: center;
   column-gap: 12px;
@@ -696,7 +779,7 @@ textarea:focus-visible {
   position: sticky;
   top: 18px;
   z-index: 12;
-  justify-self: end;
+  justify-self: start;
 }
 
 .milkdown-editor {
@@ -846,45 +929,6 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
-.utility-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: var(--rail-width);
-  min-width: var(--rail-width);
-  min-height: 0;
-  padding: 10px 6px;
-  border-left: 1px solid var(--border);
-  background: var(--surface-muted);
-}
-
-.utility-rail .el-button:not(.is-text) {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
-  margin: 0;
-  border-color: var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-muted);
-}
-
-.utility-rail .el-button:not(.is-disabled):not([disabled]):not(.is-text):hover,
-.utility-rail .el-button:not(.is-disabled):not([disabled]):not(.is-text):focus-visible,
-.utility-rail .el-button.el-button--primary:not(.is-disabled):not([disabled]):not(.is-text) {
-  border-color: color-mix(in srgb, var(--accent), transparent 38%);
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-}
-
-.utility-rail__divider {
-  width: 22px;
-  height: 1px;
-  margin: 2px 0;
-  background: var(--border);
-}
-
 .utility-panel-scroll {
   height: 100%;
 }
@@ -983,13 +1027,6 @@ textarea:focus-visible {
   font-size: 12px;
   font-weight: 700;
   text-align: center;
-}
-
-.settings-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 4px;
 }
 
 @media (max-width: 1100px) {

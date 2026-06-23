@@ -30,14 +30,14 @@ class MemoryStorage implements Storage {
 }
 
 describe('theme helpers', () => {
-  test('reads persisted dark or light theme and defaults to light', () => {
+  test('reads persisted dark or light theme and defaults to dark command workspace', () => {
     const storage = new MemoryStorage()
 
-    expect(getInitialTheme(storage)).toBe('light')
-    storage.setItem('donote.theme', 'dark')
     expect(getInitialTheme(storage)).toBe('dark')
-    storage.setItem('donote.theme', 'unexpected')
+    storage.setItem('donote.theme', 'light')
     expect(getInitialTheme(storage)).toBe('light')
+    storage.setItem('donote.theme', 'unexpected')
+    expect(getInitialTheme(storage)).toBe('dark')
   })
 
   test('applies and toggles theme on the document root', () => {

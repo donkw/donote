@@ -21,8 +21,6 @@ defineEmits<{
   (event: 'update-attachment-directory', key: keyof AttachmentDirectories, value: string): void
   (event: 'select-attachment-directory', key: keyof AttachmentDirectories): void
   (event: 'select-workspace'): void
-  (event: 'cancel'): void
-  (event: 'save'): void
 }>()
 </script>
 
@@ -116,9 +114,5 @@ defineEmits<{
         />
       </ElFormItem>
     </ElForm>
-    <div class="settings-actions">
-      <ElButton @click="$emit('cancel')">取消</ElButton>
-      <ElButton data-test="settings-save" type="primary" @click="$emit('save')">保存</ElButton>
-    </div>
   </div>
 </template>

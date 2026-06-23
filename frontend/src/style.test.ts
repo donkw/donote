@@ -53,36 +53,89 @@ describe('editor layout styles', () => {
   })
 })
 
-describe('Obsidian dark shell styles', () => {
-  test('uses the selected dark shell palette for the dark theme', () => {
+describe('Dark command workspace styles', () => {
+  test('uses the selected dark command palette for the dark theme', () => {
     const block = cssBlock(":root[data-theme='dark']")
 
-    expectCssVariable(block, '--app-bg', '#11151c')
-    expectCssVariable(block, '--surface', '#202632')
-    expectCssVariable(block, '--surface-muted', '#161a22')
-    expectCssVariable(block, '--border', '#2b3240')
-    expectCssVariable(block, '--accent-soft', '#2b3a56')
-    expectCssVariable(block, '--accent-strong', '#d9e7ff')
+    expectCssVariable(block, '--app-bg', '#1c1b1a')
+    expectCssVariable(block, '--surface', '#23211f')
+    expectCssVariable(block, '--surface-muted', '#181716')
+    expectCssVariable(block, '--border', '#34302b')
+    expectCssVariable(block, '--accent', '#b97855')
+    expectCssVariable(block, '--accent-soft', '#33231d')
+    expectCssVariable(block, '--accent-strong', '#d8a184')
     expect(block).not.toContain('--border-strong')
   })
 
-  test('defines focused dark shell styling hooks for the main surfaces', () => {
+  test('keeps dark primary button highlight states in the accent family', () => {
+    const block = cssBlock(":root[data-theme='dark'] .el-button--primary")
+
+    expect(block).toMatch(/--el-button-hover-bg-color:\s*#c98d68/)
+    expect(block).toMatch(/--el-button-hover-border-color:\s*#c98d68/)
+    expect(block).toMatch(/--el-button-active-bg-color:\s*#9d6244/)
+    expect(block).toMatch(/--el-button-active-border-color:\s*#9d6244/)
+  })
+
+  test('defines focused command workspace styling hooks for the main surfaces', () => {
+    expect(cssBlock('.command-toolbar')).toMatch(/grid-template-columns:\s*minmax\(220px,\s*320px\) minmax\(0,\s*1fr\) auto/)
+    expect(cssBlock('.command-center-button')).toBe('')
+    expect(cssBlock('.command-status')).toBe('')
+    expect(cssBlock('.command-count')).toBe('')
+    expect(cssBlock('.workspace-layout')).toMatch(
+      /grid-template-columns:\s*var\(--sidebar-width\) 8px minmax\(0,\s*1fr\)/,
+    )
+    expect(cssBlock('.workspace-layout.without-sidebar')).toMatch(
+      /grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+    )
     expect(cssBlock('.workspace-sidebar')).toMatch(/background:\s*var\(--surface-muted\)/)
     expect(cssBlock('.sidebar-header')).toMatch(/padding:\s*8px 12px/)
     expect(cssBlock('.workspace-sidebar__top')).toBe('')
     expect(cssBlock('.file-tree-context-menu')).toMatch(/box-shadow:\s*0 18px 44px/)
     expect(cssBlock('.document-tabs.el-tabs')).toMatch(/background:\s*var\(--surface-muted\)/)
-    expect(cssBlock('.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item')).toMatch(
-      /color:\s*var\(--text-subtle\)/,
-    )
+    const tabItemBlock = cssBlock('.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item')
+    expect(tabItemBlock).toMatch(/color:\s*var\(--text-subtle\)/)
+    expect(tabItemBlock).toMatch(/font-size:\s*var\(--tabs-font-size,\s*13px\)/)
     const activeTabBlock = cssBlock(
       '.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item.is-active',
     )
     expect(activeTabBlock).toMatch(/border-color:\s*color-mix\(in srgb,\s*var\(--accent\)/)
     expect(activeTabBlock).toMatch(/color:\s*var\(--accent-strong\)/)
     expect(activeTabBlock).toMatch(/box-shadow:\s*inset 0 2px 0 var\(--accent\)/)
-    expect(cssBlock('.utility-rail')).toMatch(/background:\s*var\(--surface-muted\)/)
     expect(cssBlock('.el-drawer.utility-drawer')).toMatch(/background:\s*var\(--surface\)/)
+  })
+
+  test('maps the sidebar font size setting into Element Plus sidebar controls', () => {
+    const block = cssBlock('.workspace-sidebar')
+
+    expect(block).toMatch(/--el-font-size-base:\s*var\(--sidebar-font-size,\s*13px\)/)
+    expect(block).toMatch(/font-size:\s*var\(--sidebar-font-size,\s*13px\)/)
+  })
+
+  test('positions the editor format toolbar on the right side of the editor', () => {
+    const shellBlock = cssBlock('.milkdown-shell')
+    const toolbarBlock = cssBlock('.editor-format-toolbar')
+
+    expect(shellBlock).toMatch(
+      /grid-template-columns:\s*minmax\(0,\s*min\(var\(--editor-content-width,\s*900px\),\s*calc\(100% - 52px\)\)\) 40px/,
+    )
+    expect(toolbarBlock).toMatch(/justify-self:\s*start/)
+  })
+
+  test('keeps the top command toolbar compact', () => {
+    const toolbarBlock = cssBlock('.command-toolbar')
+    const brandBlock = cssBlock('.brand-mark')
+    const actionsBlock = cssBlock('.command-actions')
+    const buttonBlock = cssBlock('.command-toolbar .el-button:not(.is-text)')
+
+    expect(toolbarBlock).toMatch(/min-height:\s*40px/)
+    expect(toolbarBlock).toMatch(/gap:\s*10px/)
+    expect(toolbarBlock).toMatch(/padding:\s*4px 10px/)
+    expect(brandBlock).toMatch(/width:\s*24px/)
+    expect(brandBlock).toMatch(/height:\s*24px/)
+    expect(actionsBlock).toMatch(/gap:\s*6px/)
+    expect(buttonBlock).toMatch(/width:\s*28px/)
+    expect(buttonBlock).toMatch(/height:\s*28px/)
+    expect(buttonBlock).toMatch(/min-height:\s*28px/)
   })
 
   test('defines readable dark primary button foreground states', () => {
@@ -106,9 +159,9 @@ describe('Obsidian dark shell styles', () => {
     selectors.forEach(expectSelectorExclusions)
   })
 
-  test('keeps utility rail button state styling disabled-safe', () => {
+  test('keeps command toolbar button state styling disabled-safe', () => {
     const selectors = Array.from(
-      stylesheet.matchAll(/\.utility-rail\s+\.el-button[^{]+(?=\{)/g),
+      stylesheet.matchAll(/\.command-toolbar\s+\.el-button[^{]+(?=\{)/g),
       (match) => match[0],
     ).filter(
       (selector) =>
