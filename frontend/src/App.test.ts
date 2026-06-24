@@ -711,19 +711,18 @@ describe('App shell', () => {
     emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
-    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(true)
-    expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([
-      'projects',
-      'projects/archive',
-    ])
+    expect(wrapper.find('[data-test="folder-projects"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
+    expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([])
 
     await wrapper.get('[data-test="folder-projects"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-test="file-projects/archive/plan.md"]').isVisible()).toBe(false)
-    expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([])
+    expect(wrapper.find('[data-test="folder-projects/archive"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
+    expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual(['projects'])
     expect(window.localStorage.getItem('donote.treeExpansion')).toBe(
-      '{"D:/notes":["projects"]}',
+      '{"D:/notes":["projects/archive"]}',
     )
 
     wrapper.unmount()
@@ -732,9 +731,11 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(reopened.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
-    expect(reopened.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([])
+    expect(reopened.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([
+      'projects',
+    ])
 
-    await reopened.get('[data-test="folder-projects"]').trigger('click')
+    await reopened.get('[data-test="folder-projects/archive"]').trigger('click')
     await flushPromises()
 
     expect(reopened.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(true)

@@ -575,7 +575,7 @@ textarea:focus-visible {
 }
 
 .file-tree-context-menu {
-  position: absolute;
+  position: fixed;
   z-index: 30;
   display: grid;
   min-width: 152px;

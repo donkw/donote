@@ -166,12 +166,10 @@ function treeNodeTestId(node: main.FileNode) {
 function openContextMenu(event: MouseEvent, node: main.FileNode) {
   event.preventDefault()
   event.stopPropagation()
-  const host = (event.currentTarget as HTMLElement).closest('.workspace-sidebar')
-  const bounds = host?.getBoundingClientRect()
   contextMenu.value = {
     node,
-    x: Math.max(8, bounds ? event.clientX - bounds.left : event.clientX),
-    y: Math.max(8, bounds ? event.clientY - bounds.top : event.clientY),
+    x: Math.max(8, event.clientX),
+    y: Math.max(8, event.clientY),
   }
 }
 

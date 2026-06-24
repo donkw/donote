@@ -6,12 +6,15 @@ export function getCollapsedFolderPaths(
   workspaceRoot: string,
   storage: Storage | undefined = window.localStorage,
 ): string[] {
-  const saved = readStore(storage)
-  const paths = saved[workspaceRoot]
-  if (!Array.isArray(paths) || paths.some((path) => typeof path !== 'string')) {
-    return []
-  }
-  return sortUnique(paths)
+  return readSavedCollapsedFolderPaths(workspaceRoot, storage) ?? []
+}
+
+export function getInitialCollapsedFolderPaths(
+  workspaceRoot: string,
+  fallbackPaths: string[],
+  storage: Storage | undefined = window.localStorage,
+): string[] {
+  return readSavedCollapsedFolderPaths(workspaceRoot, storage) ?? sortUnique(fallbackPaths)
 }
 
 export function saveCollapsedFolderPaths(
@@ -34,6 +37,21 @@ export function toggleCollapsedFolderPath(current: string[], path: string): stri
     collapsed.add(path)
   }
   return sortUnique([...collapsed])
+}
+
+function readSavedCollapsedFolderPaths(
+  workspaceRoot: string,
+  storage: Storage | undefined,
+): string[] | null {
+  const saved = readStore(storage)
+  if (!Object.prototype.hasOwnProperty.call(saved, workspaceRoot)) {
+    return null
+  }
+  const paths = saved[workspaceRoot]
+  if (!Array.isArray(paths) || paths.some((path) => typeof path !== 'string')) {
+    return null
+  }
+  return sortUnique(paths)
 }
 
 function readStore(storage: Storage | undefined): TreeExpansionStore {

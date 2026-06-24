@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   getCollapsedFolderPaths,
+  getInitialCollapsedFolderPaths,
   saveCollapsedFolderPaths,
   toggleCollapsedFolderPath,
   treeExpansionStorageKey,
@@ -27,6 +28,20 @@ function createStorage(value: string | null): Storage {
 describe('tree expansion persistence', () => {
   test('defaults to no collapsed folders for a workspace', () => {
     expect(getCollapsedFolderPaths('D:/notes', createStorage(null))).toEqual([])
+  })
+
+  test('uses provided fallback collapsed folders when a workspace has no saved state', () => {
+    expect(
+      getInitialCollapsedFolderPaths('D:/notes', ['projects', 'archive'], createStorage(null)),
+    ).toEqual(['archive', 'projects'])
+  })
+
+  test('keeps an explicitly saved empty collapsed state', () => {
+    const storage = createStorage('{"D:/notes":[]}')
+
+    expect(
+      getInitialCollapsedFolderPaths('D:/notes', ['projects', 'archive'], storage),
+    ).toEqual([])
   })
 
   test('saves collapsed folders per workspace', () => {

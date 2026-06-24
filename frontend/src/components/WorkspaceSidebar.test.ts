@@ -170,6 +170,37 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.emitted('create-markdown')).toEqual([['']])
   })
 
+  test('positions the context menu with viewport coordinates so it can cover the editor pane', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects', 'projects/archive'],
+      },
+    })
+    vi.spyOn(wrapper.get('.workspace-sidebar').element, 'getBoundingClientRect').mockReturnValue({
+      x: 240,
+      y: 16,
+      left: 240,
+      top: 16,
+      right: 520,
+      bottom: 720,
+      width: 280,
+      height: 704,
+      toJSON: () => ({}),
+    })
+
+    await wrapper.get('[data-test="folder-projects"]').trigger('contextmenu', {
+      clientX: 552,
+      clientY: 88,
+    })
+
+    const menu = wrapper.get('[data-test="file-tree-context-menu"]')
+    expect(menu.attributes('style')).toContain('left: 552px')
+    expect(menu.attributes('style')).toContain('top: 88px')
+  })
+
   test('clicking a folder emits exactly one collapse intent', async () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {

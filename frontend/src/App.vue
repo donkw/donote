@@ -52,7 +52,7 @@ import {
   saveSidebarWidth,
 } from './lib/sidebarWidth'
 import { applyTheme, getInitialTheme, toggleTheme, type ThemeMode } from './lib/theme'
-import { getCollapsedFolderPaths, saveCollapsedFolderPaths } from './lib/treeExpansion'
+import { getInitialCollapsedFolderPaths, saveCollapsedFolderPaths } from './lib/treeExpansion'
 import type { OpenDocument, SaveState, UtilityPanel } from './types/app'
 
 const lastWorkspaceStorageKey = 'donote.lastWorkspaceRoot'
@@ -213,7 +213,9 @@ async function restoreLastWorkspace(): Promise<boolean> {
 }
 
 function applyWorkspaceInfo(info: main.WorkspaceInfo) {
-  collapsedFolderPaths.value = new Set(getCollapsedFolderPaths(info.rootPath))
+  collapsedFolderPaths.value = new Set(
+    getInitialCollapsedFolderPaths(info.rootPath, collectFolderPaths(info.tree)),
+  )
   workspace.value = info
   openDocuments.value = []
   activeDocumentPath.value = ''
