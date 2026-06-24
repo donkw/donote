@@ -33,13 +33,6 @@ function panelType(panel: UtilityPanel) {
 
 <template>
   <header data-test="command-toolbar" class="command-toolbar">
-    <div class="command-brand">
-      <div data-test="brand-mark" class="brand-mark">D</div>
-      <div class="command-brand__copy">
-        <div class="command-brand__name">DoNote</div>
-      </div>
-    </div>
-
     <div class="command-toolbar__spacer" aria-hidden="true" />
 
     <div class="command-actions">

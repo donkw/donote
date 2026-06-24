@@ -893,7 +893,11 @@ function dismissErrorBanner() {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div
+    class="app-shell"
+    :class="{ 'without-sidebar': !showSidebar, 'is-resizing-sidebar': isResizingSidebar }"
+    :style="layoutFontStyle"
+  >
     <div v-if="visibleErrorMessage" data-test="error-banner" class="error-banner" role="alert">
       <span class="error-banner__message">{{ visibleErrorMessage }}</span>
       <button
@@ -924,7 +928,6 @@ function dismissErrorBanner() {
       data-test="workspace-layout"
       class="workspace-layout"
       :class="{ 'without-sidebar': !showSidebar, 'is-resizing-sidebar': isResizingSidebar }"
-      :style="layoutFontStyle"
     >
       <WorkspaceSidebar
         v-if="showSidebar"

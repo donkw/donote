@@ -208,6 +208,7 @@ textarea:focus-visible {
 
 .app-shell {
   display: grid;
+  grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr);
   width: 100%;
   height: 100vh;
@@ -215,10 +216,15 @@ textarea:focus-visible {
   background: var(--app-bg);
 }
 
+.app-shell.without-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .command-toolbar {
+  grid-column: 3;
   grid-row: 2;
   display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   min-width: 0;
   min-height: 40px;
@@ -228,39 +234,8 @@ textarea:focus-visible {
   background: var(--surface);
 }
 
-.command-brand {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--app-bg);
-  font-size: 13px;
-  font-weight: 850;
-  line-height: 1;
-}
-
-.command-brand__copy {
-  min-width: 0;
-}
-
-.command-brand__name {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 850;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.app-shell.without-sidebar .command-toolbar {
+  grid-column: 1;
 }
 
 .command-toolbar__spacer {
@@ -352,6 +327,7 @@ textarea:focus-visible {
 }
 
 .error-banner {
+  grid-column: 1 / -1;
   grid-row: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -394,19 +370,13 @@ textarea:focus-visible {
 }
 
 .workspace-layout {
-  grid-row: 3;
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr);
-  min-height: 0;
-  overflow: hidden;
-}
-
-.workspace-layout.without-sidebar {
-  grid-template-columns: minmax(0, 1fr);
+  display: contents;
 }
 
 .workspace-sidebar,
 .sidebar {
+  grid-column: 1;
+  grid-row: 2 / 4;
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -420,6 +390,8 @@ textarea:focus-visible {
 }
 
 .sidebar-resizer {
+  grid-column: 2;
+  grid-row: 2 / 4;
   display: block;
   width: 100%;
   min-width: 0;
@@ -444,11 +416,11 @@ textarea:focus-visible {
 
 .sidebar-resizer:hover::before,
 .sidebar-resizer:focus-visible::before,
-.workspace-layout.is-resizing-sidebar .sidebar-resizer::before {
+.app-shell.is-resizing-sidebar .sidebar-resizer::before {
   background: var(--accent);
 }
 
-.workspace-layout.is-resizing-sidebar {
+.app-shell.is-resizing-sidebar {
   cursor: col-resize;
   user-select: none;
 }
@@ -651,6 +623,8 @@ textarea:focus-visible {
 }
 
 .editor-pane {
+  grid-column: 3;
+  grid-row: 3;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-width: 0;
@@ -658,6 +632,10 @@ textarea:focus-visible {
   overflow: hidden;
   background: var(--app-bg);
   font-size: var(--editor-font-size, 17px);
+}
+
+.app-shell.without-sidebar .editor-pane {
+  grid-column: 1;
 }
 
 .document-tabs.el-tabs {

@@ -217,7 +217,8 @@ describe('App shell', () => {
 
     expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="command-toolbar"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('DoNote')
     expect(wrapper.find('.utility-rail').exists()).toBe(false)
     expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="theme-toggle"]').exists()).toBe(true)
@@ -1336,7 +1337,7 @@ describe('App shell', () => {
   test('applies settings immediately from the settings dialog', async () => {
     const wrapper = mount(App)
 
-    const initialStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
+    const initialStyle = wrapper.get('.app-shell').attributes('style')
     expect(initialStyle).toContain('--sidebar-width: 286px')
     expect(initialStyle).toContain('--sidebar-font-size: 13px')
     expect(initialStyle).toContain('--tabs-font-size: 13px')
@@ -1360,7 +1361,7 @@ describe('App shell', () => {
     await wrapper.get('[data-test="attachment-image-dir"]').setValue('assets/images')
     await wrapper.get('[data-test="attachment-file-dir"]').setValue('assets/files')
 
-    const layoutStyle = wrapper.get('[data-test="workspace-layout"]').attributes('style')
+    const layoutStyle = wrapper.get('.app-shell').attributes('style')
     expect(layoutStyle).toContain('--sidebar-font-size: 10px')
     expect(layoutStyle).toContain('--tabs-font-size: 10px')
     expect(layoutStyle).toContain('--editor-font-size: 10px')
@@ -1543,16 +1544,16 @@ describe('App shell', () => {
 
   test('resizes the sidebar by dragging the divider and stores the width', async () => {
     const wrapper = mount(App)
-    const layout = wrapper.get('[data-test="workspace-layout"]')
+    const shell = wrapper.get('.app-shell')
     const resizer = wrapper.get('[data-test="sidebar-resizer"]')
 
-    expect(layout.attributes('style')).toContain('--sidebar-width: 286px')
+    expect(shell.attributes('style')).toContain('--sidebar-width: 286px')
 
     dispatchPointerEvent(resizer.element, 'pointerdown', { clientX: 286, button: 0 })
     dispatchPointerEvent(window, 'pointermove', { clientX: 356 })
     await wrapper.vm.$nextTick()
 
-    expect(layout.attributes('style')).toContain('--sidebar-width: 356px')
+    expect(shell.attributes('style')).toContain('--sidebar-width: 356px')
     expect(window.localStorage.getItem('donote.sidebarWidth')).toBeNull()
 
     dispatchPointerEvent(window, 'pointerup', { clientX: 356 })
@@ -1566,7 +1567,7 @@ describe('App shell', () => {
 
     const wrapper = mount(App)
 
-    expect(wrapper.get('[data-test="workspace-layout"]').attributes('style')).toContain(
+    expect(wrapper.get('.app-shell').attributes('style')).toContain(
       '--sidebar-width: 372px',
     )
   })

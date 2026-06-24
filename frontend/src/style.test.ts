@@ -77,17 +77,19 @@ describe('Dark command workspace styles', () => {
   })
 
   test('defines focused command workspace styling hooks for the main surfaces', () => {
-    expect(cssBlock('.command-toolbar')).toMatch(/grid-template-columns:\s*minmax\(220px,\s*320px\) minmax\(0,\s*1fr\) auto/)
+    expect(cssBlock('.app-shell')).toMatch(
+      /grid-template-columns:\s*var\(--sidebar-width\) 8px minmax\(0,\s*1fr\)/,
+    )
+    expect(cssBlock('.app-shell.without-sidebar')).toMatch(
+      /grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+    )
+    expect(cssBlock('.command-toolbar')).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\) auto/)
     expect(cssBlock('.command-center-button')).toBe('')
     expect(cssBlock('.command-status')).toBe('')
     expect(cssBlock('.command-count')).toBe('')
-    expect(cssBlock('.workspace-layout')).toMatch(
-      /grid-template-columns:\s*var\(--sidebar-width\) 8px minmax\(0,\s*1fr\)/,
-    )
-    expect(cssBlock('.workspace-layout.without-sidebar')).toMatch(
-      /grid-template-columns:\s*minmax\(0,\s*1fr\)/,
-    )
+    expect(cssBlock('.workspace-layout')).toMatch(/display:\s*contents/)
     expect(cssBlock('.workspace-sidebar')).toMatch(/background:\s*var\(--surface-muted\)/)
+    expect(cssBlock('.workspace-sidebar')).toMatch(/grid-row:\s*2 \/ 4/)
     expect(cssBlock('.sidebar-header')).toMatch(/padding:\s*8px 12px/)
     expect(cssBlock('.workspace-sidebar__top')).toBe('')
     const contextMenuBlock = cssBlock('.file-tree-context-menu')
@@ -125,15 +127,14 @@ describe('Dark command workspace styles', () => {
 
   test('keeps the top command toolbar compact', () => {
     const toolbarBlock = cssBlock('.command-toolbar')
-    const brandBlock = cssBlock('.brand-mark')
     const actionsBlock = cssBlock('.command-actions')
     const buttonBlock = cssBlock('.command-toolbar .el-button:not(.is-text)')
 
     expect(toolbarBlock).toMatch(/min-height:\s*40px/)
     expect(toolbarBlock).toMatch(/gap:\s*10px/)
     expect(toolbarBlock).toMatch(/padding:\s*4px 10px/)
-    expect(brandBlock).toMatch(/width:\s*24px/)
-    expect(brandBlock).toMatch(/height:\s*24px/)
+    expect(cssBlock('.command-brand')).toBe('')
+    expect(cssBlock('.brand-mark')).toBe('')
     expect(actionsBlock).toMatch(/gap:\s*6px/)
     expect(buttonBlock).toMatch(/width:\s*28px/)
     expect(buttonBlock).toMatch(/height:\s*28px/)
