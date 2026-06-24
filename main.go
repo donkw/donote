@@ -11,6 +11,8 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+const appTitle = "DoNote"
+
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
@@ -18,7 +20,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "donote",
+		Title:     appTitle,
 		Width:     windowState.Width,
 		Height:    windowState.Height,
 		MinWidth:  minWindowWidth,

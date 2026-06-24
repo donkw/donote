@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { X } from '@lucide/vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
@@ -62,6 +63,7 @@ const openDocuments = ref<OpenDocument[]>([])
 const activeDocumentPath = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+const dismissedErrorKey = ref('')
 const showSidebar = ref(true)
 const activeUtilityPanel = ref<UtilityPanel>('outline')
 const showUtilityDrawer = ref(false)
@@ -92,6 +94,19 @@ const expandedFolderPaths = computed(() =>
 )
 const activeDocument = computed(() =>
   openDocuments.value.find((document) => document.path === activeDocumentPath.value) ?? null,
+)
+const currentErrorMessage = computed(() => errorMessage.value || activeDocument.value?.error || '')
+const currentErrorKey = computed(() => {
+  if (errorMessage.value) {
+    return `global:${errorMessage.value}`
+  }
+  if (activeDocument.value?.error) {
+    return `document:${activeDocument.value.path}:${activeDocument.value.error}`
+  }
+  return ''
+})
+const visibleErrorMessage = computed(() =>
+  currentErrorKey.value !== dismissedErrorKey.value ? currentErrorMessage.value : '',
 )
 const editorContent = computed({
   get: () => activeDocument.value?.content ?? '',
@@ -868,14 +883,29 @@ function isImageFile(file: File) {
 function setError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
   errorMessage.value = message
+  dismissedErrorKey.value = ''
   ElMessage.error(message)
+}
+
+function dismissErrorBanner() {
+  dismissedErrorKey.value = currentErrorKey.value
 }
 </script>
 
 <template>
   <div class="app-shell">
-    <div v-if="errorMessage || activeDocument?.error" class="error-banner">
-      {{ errorMessage || activeDocument?.error }}
+    <div v-if="visibleErrorMessage" data-test="error-banner" class="error-banner" role="alert">
+      <span class="error-banner__message">{{ visibleErrorMessage }}</span>
+      <button
+        data-test="dismiss-error-banner"
+        class="error-banner__close"
+        type="button"
+        aria-label="关闭错误提示"
+        title="关闭错误提示"
+        @click="dismissErrorBanner"
+      >
+        <X :size="14" />
+      </button>
     </div>
 
     <CommandToolbar

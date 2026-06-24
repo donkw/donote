@@ -36,7 +36,7 @@ function panelType(panel: UtilityPanel) {
     <div class="command-brand">
       <div data-test="brand-mark" class="brand-mark">D</div>
       <div class="command-brand__copy">
-        <div class="command-brand__name">Donote</div>
+        <div class="command-brand__name">DoNote</div>
       </div>
     </div>
 

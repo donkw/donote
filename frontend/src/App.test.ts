@@ -553,6 +553,50 @@ describe('App shell', () => {
     vi.useRealTimers()
   })
 
+  test('allows dismissing the error banner and shows repeated errors again', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+    vi.mocked(SaveMarkdown)
+      .mockRejectedValueOnce(new Error('保存失败'))
+      .mockRejectedValueOnce(new Error('保存失败'))
+
+    const wrapper = mount(App)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.mock-editor').setValue('# Changed')
+    await flushPromises()
+
+    await wrapper.get('[data-test="save-now"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="error-banner"]').text()).toContain('保存失败')
+    await wrapper.get('[data-test="dismiss-error-banner"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="error-banner"]').exists()).toBe(false)
+
+    await wrapper.get('[data-test="save-now"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="error-banner"]').text()).toContain('保存失败')
+    expect(SaveMarkdown).toHaveBeenCalledTimes(2)
+  })
+
   test('clears dirty state when undo returns Milkdown-normalized original markdown', async () => {
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',

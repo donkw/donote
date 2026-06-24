@@ -353,12 +353,44 @@ textarea:focus-visible {
 
 .error-banner {
   grid-row: 1;
-  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--danger), transparent 64%);
   background: color-mix(in srgb, var(--danger), transparent 90%);
   color: var(--danger);
   font-size: 13px;
   font-weight: 650;
+}
+
+.error-banner__message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.error-banner__close {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.error-banner__close:hover,
+.error-banner__close:focus-visible {
+  background: color-mix(in srgb, var(--danger), transparent 88%);
+}
+
+.error-banner__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .workspace-layout {

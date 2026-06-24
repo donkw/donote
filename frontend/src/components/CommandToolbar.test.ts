@@ -14,7 +14,7 @@ describe('CommandToolbar', () => {
       },
     })
 
-    expect(wrapper.get('.command-brand__name').text()).toBe('Donote')
+    expect(wrapper.get('.command-brand__name').text()).toBe('DoNote')
     expect(wrapper.find('.command-brand__meta').exists()).toBe(false)
     expect(wrapper.find('[data-test="command-workspace-name"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="command-active-document"]').exists()).toBe(false)
