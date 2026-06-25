@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Bold, Code, Heading1, Italic, List, Quote, Table2 } from '@lucide/vue'
-import { ElButton, ElButtonGroup, ElTooltip } from 'element-plus'
+import { NButton, NButtonGroup, NTooltip } from 'naive-ui'
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right'
 
@@ -34,16 +34,26 @@ const formatActions = [
 </script>
 
 <template>
-  <ElButtonGroup data-test="format-toolbar" class="toolbar-group control-cluster format-toolbar format-toolbar--vertical">
-    <ElTooltip
+  <NButtonGroup data-test="format-toolbar" class="toolbar-group control-cluster format-toolbar format-toolbar--vertical">
+    <NTooltip
       v-for="action in formatActions"
       :key="action.key"
-      :content="action.title"
       :placement="tooltipPlacement"
     >
-      <ElButton class="tool-button" :data-test="`format-${action.key}`" @click="$emit('insert-markdown', action.markdown)">
-        <component :is="action.icon" :size="17" />
-      </ElButton>
-    </ElTooltip>
-  </ElButtonGroup>
+      <template #trigger>
+        <NButton
+          class="tool-button"
+          size="small"
+          quaternary
+          :data-test="`format-${action.key}`"
+          :aria-label="action.title"
+          :title="action.title"
+          @click="$emit('insert-markdown', action.markdown)"
+        >
+          <component :is="action.icon" :size="17" />
+        </NButton>
+      </template>
+      {{ action.title }}
+    </NTooltip>
+  </NButtonGroup>
 </template>

@@ -10,6 +10,11 @@ describe('FormatToolbar', () => {
       'format-toolbar--vertical',
     )
     expect(wrapper.find('[data-test="format-table"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="format-heading"]').classes()).toContain('n-button')
+    expect(wrapper.get('[data-test="format-heading"]').attributes('aria-label')).toBe(
+      '标题',
+    )
+    expect(wrapper.get('[data-test="format-heading"]').attributes('title')).toBe('标题')
 
     await wrapper.get('[data-test="format-heading"]').trigger('click')
     await wrapper.get('[data-test="format-table"]').trigger('click')

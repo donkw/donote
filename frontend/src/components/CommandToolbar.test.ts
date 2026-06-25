@@ -27,7 +27,8 @@ describe('CommandToolbar', () => {
     expect(wrapper.find('.command-count').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('未保存')
     expect(wrapper.find('.command-center-button').exists()).toBe(false)
-    expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('el-button')
+    expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('n-button')
+    expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('command-button')
     expect(wrapper.get('[data-test="save-now"]').classes()).not.toContain('el-button--primary')
     const actionOrder = wrapper
       .find('.command-actions')
@@ -64,5 +65,9 @@ describe('CommandToolbar', () => {
     expect(wrapper.get('[data-test="theme-toggle"]').attributes('aria-label')).toBe('切换深色')
     expect(wrapper.get('[data-test="save-now"]').attributes('aria-label')).toBe('立即保存')
     expect(wrapper.get('[data-test="save-now"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="utility-outline"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-test="utility-outline"]').classes()).toContain(
+      'command-button--active',
+    )
   })
 })
