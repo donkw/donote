@@ -1,16 +1,9 @@
 <script setup lang="ts">
-import {
-  ChevronDown,
-  ChevronRight,
-  FilePenLine,
-  FolderClosed,
-  FolderOpen,
-  NotebookTabs,
-  Search,
-} from '@lucide/vue'
-import { ElEmpty, ElInput, ElScrollbar, ElTree } from 'element-plus'
+import { Search } from '@lucide/vue'
+import { NEmpty, NInput } from 'naive-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { main } from '../../wailsjs/go/models'
+import WorkspaceTreeNode from './WorkspaceTreeNode.vue'
 
 const workspaceRootPath = '__donote_workspace_root__'
 type ContextActionKey = 'create-folder' | 'create-markdown' | 'rename' | 'delete'
@@ -37,21 +30,15 @@ const emit = defineEmits<{
   (event: 'delete-node', path: string): void
 }>()
 
-const treeProps = {
-  label: 'name',
-  children: 'children',
-  isLeaf: (data: main.FileNode) => data.type !== 'folder',
-}
-
-const treeRef = ref<InstanceType<typeof ElTree>>()
 const fileTreeQuery = ref('')
 const workspaceRootCollapsed = ref(false)
 const contextMenu = ref<ContextMenuState | null>(null)
 
-const displayTree = computed<main.FileNode[]>(() => {
+const workspaceTree = computed<main.FileNode[]>(() => {
   if (!props.workspaceName) {
     return []
   }
+
   return [
     main.FileNode.createFrom({
       name: props.workspaceName,
@@ -62,11 +49,16 @@ const displayTree = computed<main.FileNode[]>(() => {
   ]
 })
 
-const expandedTreeKeys = computed(() => {
-  if (!props.workspaceName || workspaceRootCollapsed.value) {
-    return props.expandedFolderPaths
+const displayTree = computed<main.FileNode[]>(() => filterTree(workspaceTree.value, fileTreeQuery.value))
+
+const expandedPathSet = computed(() => {
+  const expandedPaths = new Set(props.expandedFolderPaths)
+  if (props.workspaceName && !workspaceRootCollapsed.value) {
+    expandedPaths.add(workspaceRootPath)
+  } else {
+    expandedPaths.delete(workspaceRootPath)
   }
-  return [workspaceRootPath, ...props.expandedFolderPaths]
+  return expandedPaths
 })
 
 const contextActions = computed<Array<{ key: ContextActionKey; label: string }>>(() => {
@@ -91,10 +83,6 @@ const contextActions = computed<Array<{ key: ContextActionKey; label: string }>>
   return [...createActions, { key: 'rename', label: '重命名' }]
 })
 
-watch(fileTreeQuery, (query) => {
-  treeRef.value?.filter(query)
-})
-
 watch(
   () => props.workspaceName,
   () => {
@@ -113,68 +101,74 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', closeContextMenuFromKeyboard)
 })
 
-function handleNodeClick(node: main.FileNode) {
-  closeContextMenu()
-  if (node.type === 'file') {
-    emit('select-file', node.path)
-    return
-  }
-
-  const treeNode = treeRef.value?.getNode(node.path)
-  if (!treeNode) {
-    return
-  }
-
-  if (treeNode.expanded) {
-    treeNode.collapse()
-    handleFolderExpansionChange(node, false)
-  } else {
-    treeNode.expand()
-    handleFolderExpansionChange(node, true)
-  }
-}
-
-function handleNodeExpand(node: main.FileNode) {
-  handleFolderExpansionChange(node, true)
-}
-
-function handleNodeCollapse(node: main.FileNode) {
-  handleFolderExpansionChange(node, false)
-}
-
-function filterTreeNode(query: string, node: main.FileNode) {
+function filterTree(nodes: main.FileNode[], query: string) {
   const normalizedQuery = query.trim().toLocaleLowerCase()
   if (!normalizedQuery) {
-    return true
+    return nodes
   }
-  return (
-    node.name.toLocaleLowerCase().includes(normalizedQuery) ||
-    node.path.toLocaleLowerCase().includes(normalizedQuery)
-  )
+
+  return filterTreeNodes(nodes, normalizedQuery)
 }
 
-function treeNodeStyle(level: number) {
-  return { '--tree-depth': Math.max(level - 1, 0) }
+function filterTreeNodes(nodes: main.FileNode[], normalizedQuery: string): main.FileNode[] {
+  return nodes.flatMap((node) => {
+    const filteredChildren = node.children ? filterTreeNodes(node.children, normalizedQuery) : []
+    const matchesNode =
+      node.name.toLocaleLowerCase().includes(normalizedQuery) ||
+      node.path.toLocaleLowerCase().includes(normalizedQuery)
+
+    if (!matchesNode && filteredChildren.length === 0) {
+      return []
+    }
+
+    return [
+      main.FileNode.createFrom({
+        name: node.name,
+        path: node.path,
+        type: node.type,
+        children: node.type === 'folder' ? filteredChildren : undefined,
+      }),
+    ]
+  })
 }
 
-function treeNodeTestId(node: main.FileNode) {
+function findNodeByPath(nodes: main.FileNode[], path: string): main.FileNode | null {
+  for (const node of nodes) {
+    if (node.path === path) {
+      return node
+    }
+
+    const match = findNodeByPath(node.children ?? [], path)
+    if (match) {
+      return match
+    }
+  }
+
+  return null
+}
+
+function selectFile(path: string) {
+  closeContextMenu()
+  emit('select-file', path)
+}
+
+function toggleFolder(path: string, expanded: boolean) {
+  closeContextMenu()
+  const node = findNodeByPath(displayTree.value, path)
+  if (!node || node.type !== 'folder') {
+    return
+  }
+
   if (node.path === workspaceRootPath) {
-    return 'workspace-root'
-  }
-  return node.type === 'file' ? `file-${node.path}` : `folder-${node.path}`
-}
-
-function treeNodeTitle(node: main.FileNode) {
-  return node.path === workspaceRootPath ? node.name : node.path
-}
-
-function treeNodeAriaLabel(node: main.FileNode, expanded: boolean) {
-  if (node.type === 'file') {
-    return `打开文件 ${node.name}`
+    workspaceRootCollapsed.value = !expanded
+    return
   }
 
-  const nodeKind = node.path === workspaceRootPath ? '工作区' : '文件夹'
-  return `${expanded ? '折叠' : '展开'}${nodeKind} ${node.name}`
+  if (expanded) {
+    emit('folder-expanded', node.path)
+  } else {
+    emit('folder-collapsed', node.path)
+  }
 }
 
 function openContextMenu(event: MouseEvent, node: main.FileNode) {
@@ -220,120 +214,41 @@ function runContextAction(action: ContextActionKey) {
     emit('delete-node', node.path)
   }
 }
-
-function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
-  if (node.type !== 'folder') {
-    return
-  }
-  if (node.path === workspaceRootPath) {
-    workspaceRootCollapsed.value = !expanded
-    return
-  }
-  if (expanded) {
-    emit('folder-expanded', node.path)
-  } else {
-    emit('folder-collapsed', node.path)
-  }
-}
 </script>
 
 <template>
   <aside class="sidebar workspace-sidebar">
     <div class="sidebar-header">
       <div v-if="workspaceName || tree.length" data-test="file-tree-search" class="file-tree-search">
-        <ElInput
-          v-model="fileTreeQuery"
+        <NInput
+          v-model:value="fileTreeQuery"
           placeholder="搜索文件"
           clearable
-          aria-label="搜索文件"
+          :input-props="{ 'aria-label': '搜索文件' }"
         >
           <template #prefix>
             <Search :size="15" />
           </template>
-        </ElInput>
+        </NInput>
       </div>
-      <ElEmpty v-else class="sidebar-empty" description="还没有打开笔记文件夹" :image-size="56" />
+      <NEmpty v-else class="sidebar-empty" description="还没有打开笔记文件夹" :image-size="56" />
     </div>
 
-    <ElScrollbar v-if="displayTree.length" class="file-tree-scroll">
-      <ElTree
-        ref="treeRef"
-        class="file-tree"
-        :data="displayTree"
-        node-key="path"
-        :props="treeProps"
-        :current-node-key="activeFilePath"
-        :default-expanded-keys="expandedTreeKeys"
-        :expand-on-click-node="false"
-        :filter-node-method="filterTreeNode"
-        highlight-current
-        @node-expand="handleNodeExpand"
-        @node-collapse="handleNodeCollapse"
-      >
-        <template #default="{ node, data }">
-          <button
-            class="tree-row file-tree-node"
-            :class="{
-              folder: data.type === 'folder',
-              'workspace-root': data.path === workspaceRootPath,
-              active: data.path === activeFilePath,
-            }"
-            :aria-current="data.path === activeFilePath ? 'page' : undefined"
-            :aria-expanded="data.type === 'folder' ? node.expanded : undefined"
-            :aria-label="treeNodeAriaLabel(data, node.expanded)"
-            :data-test="treeNodeTestId(data)"
-            :style="treeNodeStyle(node.level)"
-            :title="treeNodeTitle(data)"
-            type="button"
-            @click.stop="handleNodeClick(data)"
-            @contextmenu.prevent.stop="openContextMenu($event, data)"
-          >
-            <span
-              class="file-tree-node__chevron"
-              :class="{ 'file-tree-node__chevron--spacer': data.type !== 'folder' }"
-              aria-hidden="true"
-            >
-              <ChevronRight
-                v-if="data.type === 'folder' && !node.expanded"
-                :size="14"
-                :stroke-width="2.15"
-              />
-              <ChevronDown v-else-if="data.type === 'folder'" :size="14" :stroke-width="2.15" />
-            </span>
-            <span
-              class="file-tree-node__icon"
-              :class="{
-                'file-tree-node__icon--workspace': data.path === workspaceRootPath,
-                'file-tree-node__icon--folder':
-                  data.type === 'folder' && data.path !== workspaceRootPath,
-                'file-tree-node__icon--file': data.type === 'file',
-              }"
-              aria-hidden="true"
-            >
-              <NotebookTabs
-                v-if="data.path === workspaceRootPath"
-                :size="15"
-                :stroke-width="1.9"
-              />
-              <FolderOpen
-                v-else-if="data.type === 'folder' && node.expanded"
-                :size="15"
-                :stroke-width="1.9"
-              />
-              <FolderClosed
-                v-else-if="data.type === 'folder'"
-                :size="15"
-                :stroke-width="1.9"
-              />
-              <FilePenLine v-else :size="15" :stroke-width="1.9" />
-            </span>
-            <span class="file-tree-node__label">
-              <span class="file-tree-node__name">{{ data.name }}</span>
-            </span>
-          </button>
-        </template>
-      </ElTree>
-    </ElScrollbar>
+    <div v-if="displayTree.length" class="file-tree-scroll">
+      <div class="file-tree">
+        <WorkspaceTreeNode
+          v-for="node in displayTree"
+          :key="node.path"
+          :node="node"
+          :depth="0"
+          :active-file-path="activeFilePath"
+          :expanded-path-set="expandedPathSet"
+          @select-file="selectFile"
+          @toggle-folder="toggleFolder"
+          @open-context-menu="openContextMenu"
+        />
+      </div>
+    </div>
 
     <div
       v-if="contextMenu"

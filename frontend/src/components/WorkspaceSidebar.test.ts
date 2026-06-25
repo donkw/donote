@@ -1,5 +1,4 @@
 import { mount } from '@vue/test-utils'
-import { ElTree } from 'element-plus'
 import { describe, expect, test, vi } from 'vitest'
 import { main } from '../../wailsjs/go/models'
 import WorkspaceSidebar from './WorkspaceSidebar.vue'
@@ -36,7 +35,17 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.find('[data-test="open-workspace"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="new-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="new-folder"]').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElTree' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElInput' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElEmpty' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElScrollbar' }).exists()).toBe(false)
+    expect(wrapper.find('.el-tree').exists()).toBe(false)
+    expect(wrapper.find('.el-input').exists()).toBe(false)
+    expect(wrapper.find('.el-empty').exists()).toBe(false)
     expect(wrapper.get('[data-test="file-tree-search"] input').attributes('placeholder')).toBe(
+      '搜索文件',
+    )
+    expect(wrapper.get('[data-test="file-tree-search"] input').attributes('aria-label')).toBe(
       '搜索文件',
     )
     expect(wrapper.get('[data-test="workspace-root"]').text()).toContain('notes')
@@ -234,20 +243,11 @@ describe('WorkspaceSidebar', () => {
     })
 
     const folderRow = wrapper.get('[data-test="folder-projects"]')
-    const collapse = vi.fn()
-    const expand = vi.fn()
-    const getNode = vi.spyOn(wrapper.getComponent(ElTree).vm, 'getNode').mockReturnValue({
-      expanded: true,
-      collapse,
-      expand,
-    })
 
     expect(folderRow.classes()).toContain('tree-row')
+    expect(folderRow.attributes('aria-expanded')).toBe('true')
     await folderRow.trigger('click')
 
-    expect(getNode).toHaveBeenCalledWith('projects')
-    expect(collapse).toHaveBeenCalledTimes(1)
-    expect(expand).not.toHaveBeenCalled()
     expect(wrapper.emitted('folder-collapsed')).toEqual([['projects']])
     expect(wrapper.emitted('folder-expanded')).toBeUndefined()
   })
@@ -262,19 +262,10 @@ describe('WorkspaceSidebar', () => {
       },
     })
 
-    const collapse = vi.fn()
-    const expand = vi.fn()
-    const getNode = vi.spyOn(wrapper.getComponent(ElTree).vm, 'getNode').mockReturnValue({
-      expanded: false,
-      collapse,
-      expand,
-    })
+    const folderRow = wrapper.get('[data-test="folder-projects"]')
+    expect(folderRow.attributes('aria-expanded')).toBe('false')
+    await folderRow.trigger('click')
 
-    await wrapper.get('[data-test="folder-projects"]').trigger('click')
-
-    expect(getNode).toHaveBeenCalledWith('projects')
-    expect(expand).toHaveBeenCalledTimes(1)
-    expect(collapse).not.toHaveBeenCalled()
     expect(wrapper.emitted('folder-expanded')).toEqual([['projects']])
     expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
   })
@@ -289,24 +280,25 @@ describe('WorkspaceSidebar', () => {
       },
     })
 
-    const collapse = vi.fn()
-    const expand = vi.fn()
-    const getNode = vi.spyOn(wrapper.getComponent(ElTree).vm, 'getNode').mockReturnValue({
-      expanded: true,
-      collapse,
-      expand,
-    })
+    const rootRow = wrapper.get('[data-test="workspace-root"]')
+    expect(rootRow.attributes('aria-expanded')).toBe('true')
+
+    await rootRow.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-test="workspace-root"]').attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-test="folder-projects"]').exists()).toBe(false)
 
     await wrapper.get('[data-test="workspace-root"]').trigger('click')
+    await wrapper.vm.$nextTick()
 
-    expect(getNode).toHaveBeenCalledWith('__donote_workspace_root__')
-    expect(collapse).toHaveBeenCalledTimes(1)
-    expect(expand).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-test="workspace-root"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('[data-test="folder-projects"]').exists()).toBe(true)
     expect(wrapper.emitted('folder-collapsed')).toBeUndefined()
     expect(wrapper.emitted('folder-expanded')).toBeUndefined()
   })
 
-  test('filters tree nodes from the sidebar search', async () => {
+  test('filters tree nodes in the DOM from the sidebar search', async () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {
         workspaceName: 'notes',
@@ -316,16 +308,38 @@ describe('WorkspaceSidebar', () => {
       },
     })
 
-    const filter = vi.spyOn(wrapper.getComponent(ElTree).vm, 'filter')
     await wrapper.get('[data-test="file-tree-search"] input').setValue('plan')
+    await wrapper.vm.$nextTick()
 
-    expect(filter).toHaveBeenLastCalledWith('plan')
+    expect(wrapper.find('[data-test="workspace-root"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="folder-projects"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="folder-projects/archive"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(true)
 
-    const filterNodeMethod = wrapper.getComponent(ElTree).props(
-      'filterNodeMethod',
-    ) as (value: string, data: main.FileNode) => boolean
-    const fileNode = tree[0].children?.[0].children?.[0] as main.FileNode
-    expect(filterNodeMethod('plan', fileNode)).toBe(true)
-    expect(filterNodeMethod('missing', fileNode)).toBe(false)
+    await wrapper.get('[data-test="file-tree-search"] input').setValue('missing')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
+  })
+
+  test('renders the empty workspace state without Element Plus chrome', () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: '',
+        tree: [],
+        activeFilePath: '',
+        expandedFolderPaths: [],
+      },
+    })
+
+    expect(wrapper.text()).toContain('还没有打开笔记文件夹')
+    expect(wrapper.find('[data-test="file-tree-search"]').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElTree' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElInput' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElEmpty' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ElScrollbar' }).exists()).toBe(false)
+    expect(wrapper.find('.el-tree').exists()).toBe(false)
+    expect(wrapper.find('.el-input').exists()).toBe(false)
+    expect(wrapper.find('.el-empty').exists()).toBe(false)
   })
 })
