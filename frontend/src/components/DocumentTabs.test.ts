@@ -43,7 +43,7 @@ describe('DocumentTabs', () => {
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
   })
 
-  test('uses Donote tab hooks instead of Element Plus tab hooks', () => {
+  test('renders Donote tab structure and active tab state', () => {
     const wrapper = mount(DocumentTabs, {
       props: {
         documents,
@@ -51,10 +51,12 @@ describe('DocumentTabs', () => {
       },
     })
 
-    expect(wrapper.html()).not.toContain('el-tabs')
-    expect(wrapper.html()).not.toContain('el-tabs__')
+    expect(wrapper.get('.document-tabs').attributes('role')).toBe('tablist')
+    expect(wrapper.get('.document-tabs').attributes('aria-label')).toBe('打开的笔记')
+    expect(wrapper.get('.document-tabs__track').attributes('role')).toBe('presentation')
+    expect(wrapper.get('.document-tabs__list').attributes('role')).toBe('presentation')
+    expect(wrapper.findAll('.document-tab')).toHaveLength(documents.length)
     expect(wrapper.find('.document-tab.active').exists()).toBe(true)
-    expect(wrapper.find('.document-tab.is-active').exists()).toBe(false)
   })
 
   test('emits switch events when tab trigger is clicked', async () => {

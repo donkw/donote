@@ -343,7 +343,7 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
   })
 
-  test('renders the empty workspace state without Element Plus chrome', () => {
+  test('renders the empty workspace state without file tree controls', () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {
         workspaceName: '',
