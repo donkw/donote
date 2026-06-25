@@ -13,7 +13,7 @@
 ## File Structure
 
 - Modify `frontend/package.json` and `frontend/package-lock.json`: add `naive-ui`, remove `element-plus` after migration.
-- Modify `frontend/src/main.ts`: remove Element Plus CSS imports.
+- Modify `frontend/src/main.ts`: final cleanup removes Element Plus CSS imports in Task 8.
 - Modify `frontend/src/App.vue`: replace Element Plus message, prompt, and confirm calls; render Naive provider and prompt host.
 - Modify `frontend/src/App.test.ts`: replace Element Plus mocks with the new Donote feedback mocks and update DOM assumptions.
 - Create `frontend/src/lib/naiveTheme.ts`: centralize Naive UI theme overrides.
@@ -39,7 +39,6 @@
 **Files:**
 - Modify: `frontend/package.json`
 - Modify: `frontend/package-lock.json`
-- Modify: `frontend/src/main.ts`
 - Create: `frontend/src/lib/naiveTheme.ts`
 - Create: `frontend/src/lib/naiveTheme.test.ts`
 - Create: `frontend/src/components/AppProviders.vue`
@@ -167,21 +166,7 @@ const themeOverrides = computed(() => createNaiveThemeOverrides(props.theme))
 </template>
 ```
 
-- [ ] **Step 5: Remove Element Plus CSS imports**
-
-Modify `frontend/src/main.ts` so the imports are:
-
-```ts
-import '@milkdown/kit/prose/view/style/prosemirror.css'
-import '@milkdown/kit/prose/gapcursor/style/gapcursor.css'
-import { createApp } from 'vue'
-import App from './App.vue'
-import './style.css'
-
-createApp(App).mount('#app')
-```
-
-- [ ] **Step 6: Commit dependency and provider infrastructure**
+- [ ] **Step 5: Commit dependency and provider infrastructure**
 
 Run:
 
@@ -194,7 +179,7 @@ Expected: PASS.
 Commit:
 
 ```powershell
-git add frontend/package.json frontend/package-lock.json frontend/src/main.ts frontend/src/lib/naiveTheme.ts frontend/src/lib/naiveTheme.test.ts frontend/src/components/AppProviders.vue
+git add frontend/package.json frontend/package-lock.json frontend/src/lib/naiveTheme.ts frontend/src/lib/naiveTheme.test.ts frontend/src/components/AppProviders.vue
 git commit -m "Add Naive UI theme infrastructure"
 ```
 
@@ -1586,9 +1571,10 @@ git commit -m "Rewrite shell styles for Naive UI"
 **Files:**
 - Modify: `frontend/package.json`
 - Modify: `frontend/package-lock.json`
+- Modify: `frontend/src/main.ts`
 - Modify: all frontend files found by search
 
-- [ ] **Step 1: Uninstall Element Plus**
+- [ ] **Step 1: Uninstall Element Plus and remove global CSS imports**
 
 Run:
 
@@ -1597,6 +1583,13 @@ npm --prefix frontend uninstall element-plus
 ```
 
 Expected: `frontend/package.json` no longer lists `element-plus`.
+
+Remove these imports from `frontend/src/main.ts`:
+
+```ts
+import 'element-plus/dist/index.css'
+import 'element-plus/theme-chalk/dark/css-vars.css'
+```
 
 - [ ] **Step 2: Verify no Element Plus imports remain**
 
