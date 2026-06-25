@@ -248,4 +248,13 @@ describe('Donote shell styles', () => {
     expect(closeHoverRule.block).toMatch(/background:\s*var\(--surface-muted\)/)
     expect(closeHoverRule.block).toMatch(/color:\s*var\(--text\)/)
   })
+
+  test('keeps editor empty-state text readable on the light surface', () => {
+    const emptyStateBlock = cssBlock('.empty-state')
+    const descriptionBlock = cssBlock('.empty-state .n-empty__description')
+
+    expect(emptyStateBlock).toMatch(/color:\s*var\(--text-muted\)/)
+    expect(descriptionBlock).toMatch(/color:\s*var\(--text-muted\)/)
+    expect(descriptionBlock).toMatch(/font-size:\s*15px/)
+  })
 })

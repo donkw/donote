@@ -823,7 +823,7 @@ textarea:focus-visible {
   color: var(--accent);
 }
 
-.empty-state :where(.n-empty__description) {
+.empty-state .n-empty__description {
   color: var(--text-muted);
   font-size: 15px;
 }

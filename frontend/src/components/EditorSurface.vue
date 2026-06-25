@@ -43,6 +43,11 @@ defineEmits<{
       />
     </template>
 
-    <NEmpty v-else class="empty-state" description="选择一个笔记文件夹开始写作" />
+    <NEmpty
+      v-else
+      class="empty-state"
+      description="选择一个笔记文件夹开始写作"
+      :show-icon="false"
+    />
   </section>
 </template>
