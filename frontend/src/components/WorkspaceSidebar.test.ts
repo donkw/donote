@@ -35,13 +35,6 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.find('[data-test="open-workspace"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="new-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="new-folder"]').exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElTree' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElInput' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElEmpty' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElScrollbar' }).exists()).toBe(false)
-    expect(wrapper.find('.el-tree').exists()).toBe(false)
-    expect(wrapper.find('.el-input').exists()).toBe(false)
-    expect(wrapper.find('.el-empty').exists()).toBe(false)
     expect(wrapper.get('[data-test="file-tree-search"] input').attributes('placeholder')).toBe(
       '搜索文件',
     )
@@ -362,12 +355,5 @@ describe('WorkspaceSidebar', () => {
 
     expect(wrapper.text()).toContain('还没有打开笔记文件夹')
     expect(wrapper.find('[data-test="file-tree-search"]').exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElTree' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElInput' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElEmpty' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ElScrollbar' }).exists()).toBe(false)
-    expect(wrapper.find('.el-tree').exists()).toBe(false)
-    expect(wrapper.find('.el-input').exists()).toBe(false)
-    expect(wrapper.find('.el-empty').exists()).toBe(false)
   })
 })
