@@ -32,11 +32,18 @@ describe('DocumentTabs', () => {
 
     expect(wrapper.text()).toContain('intro.md')
     expect(wrapper.text()).toContain('draft.md')
-    expect(wrapper.get('[data-test="tab-draft.md"] .dirty-mark').text()).toBe('*')
+    const activeTab = wrapper.get('[data-test="tab-draft.md"]')
+    const inactiveTab = wrapper.get('[data-test="tab-intro.md"]')
+    const dirtyMark = wrapper.get('[data-test="tab-draft.md"] .dirty-mark')
+
+    expect(activeTab.attributes('aria-selected')).toBe('true')
+    expect(inactiveTab.attributes('aria-selected')).toBe('false')
+    expect(dirtyMark.text()).toBe('*')
+    expect(dirtyMark.attributes('aria-label')).toBe('未保存')
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
   })
 
-  test('emits switch events when tabs change', async () => {
+  test('emits switch events when tab trigger is clicked', async () => {
     const wrapper = mount(DocumentTabs, {
       props: {
         documents,
@@ -44,7 +51,7 @@ describe('DocumentTabs', () => {
       },
     })
 
-    wrapper.findComponent({ name: 'ElTabs' }).vm.$emit('update:modelValue', 'draft.md')
+    await wrapper.get('[data-test="tab-draft.md"]').trigger('click')
 
     expect(wrapper.emitted('update:activePath')?.[0]).toEqual(['draft.md'])
   })
@@ -61,5 +68,21 @@ describe('DocumentTabs', () => {
 
     expect(wrapper.emitted('close')?.[0]).toEqual([documents[0]])
     expect(wrapper.emitted('update:activePath')).toBeUndefined()
+  })
+
+  test('does not nest buttons inside document tab controls', () => {
+    const wrapper = mount(DocumentTabs, {
+      props: {
+        documents,
+        activePath: 'draft.md',
+      },
+    })
+
+    const tabs = wrapper.findAll('.document-tab')
+
+    expect(tabs).toHaveLength(documents.length)
+    for (const tab of tabs) {
+      expect(tab.find('button button').exists()).toBe(false)
+    }
   })
 })
