@@ -17,6 +17,7 @@ const props = defineProps<{
   depth: number
   activeFilePath: string
   expandedPathSet: Set<string>
+  forceExpanded: boolean
 }>()
 
 const emit = defineEmits<{
@@ -26,6 +27,9 @@ const emit = defineEmits<{
 }>()
 
 const expanded = computed(() => props.node.type === 'folder' && props.expandedPathSet.has(props.node.path))
+const effectiveExpanded = computed(
+  () => props.node.type === 'folder' && (expanded.value || props.forceExpanded),
+)
 const children = computed(() => props.node.children ?? [])
 
 function treeNodeTestId(node: main.FileNode) {
@@ -45,7 +49,7 @@ function treeNodeAriaLabel(node: main.FileNode) {
   }
 
   const nodeKind = node.path === workspaceRootPath ? '工作区' : '文件夹'
-  return `${expanded.value ? '折叠' : '展开'}${nodeKind} ${node.name}`
+  return `${effectiveExpanded.value ? '折叠' : '展开'}${nodeKind} ${node.name}`
 }
 
 function handleClick() {
@@ -54,7 +58,7 @@ function handleClick() {
     return
   }
 
-  emit('toggle-folder', props.node.path, !expanded.value)
+  emit('toggle-folder', props.node.path, !effectiveExpanded.value)
 }
 
 function handleContextMenu(event: MouseEvent) {
@@ -71,7 +75,7 @@ function handleContextMenu(event: MouseEvent) {
       active: node.path === activeFilePath,
     }"
     :aria-current="node.path === activeFilePath ? 'page' : undefined"
-    :aria-expanded="node.type === 'folder' ? expanded : undefined"
+    :aria-expanded="node.type === 'folder' ? effectiveExpanded : undefined"
     :aria-label="treeNodeAriaLabel(node)"
     :data-test="treeNodeTestId(node)"
     :style="{ '--tree-depth': depth }"
@@ -86,7 +90,7 @@ function handleContextMenu(event: MouseEvent) {
       aria-hidden="true"
     >
       <ChevronRight
-        v-if="node.type === 'folder' && !expanded"
+        v-if="node.type === 'folder' && !effectiveExpanded"
         :size="14"
         :stroke-width="2.15"
       />
@@ -103,7 +107,7 @@ function handleContextMenu(event: MouseEvent) {
     >
       <NotebookTabs v-if="node.path === workspaceRootPath" :size="15" :stroke-width="1.9" />
       <FolderOpen
-        v-else-if="node.type === 'folder' && expanded"
+        v-else-if="node.type === 'folder' && effectiveExpanded"
         :size="15"
         :stroke-width="1.9"
       />
@@ -115,7 +119,7 @@ function handleContextMenu(event: MouseEvent) {
     </span>
   </button>
 
-  <template v-if="node.type === 'folder' && expanded">
+  <template v-if="node.type === 'folder' && effectiveExpanded">
     <WorkspaceTreeNode
       v-for="child in children"
       :key="child.path"
@@ -123,6 +127,7 @@ function handleContextMenu(event: MouseEvent) {
       :depth="depth + 1"
       :active-file-path="activeFilePath"
       :expanded-path-set="expandedPathSet"
+      :force-expanded="forceExpanded"
       @select-file="emit('select-file', $event)"
       @toggle-folder="(path, expandedValue) => emit('toggle-folder', path, expandedValue)"
       @open-context-menu="(event, contextNode) => emit('open-context-menu', event, contextNode)"

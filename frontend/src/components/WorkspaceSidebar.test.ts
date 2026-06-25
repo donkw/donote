@@ -322,6 +322,34 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
   })
 
+  test('reveals matching descendants when filtering collapsed folders', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: [],
+      },
+    })
+
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
+
+    await wrapper.get('[data-test="file-tree-search"] input').setValue('plan')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-test="folder-projects"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-test="folder-projects/archive"]').attributes('aria-expanded')).toBe(
+      'true',
+    )
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(true)
+
+    await wrapper.get('[data-test="file-tree-search"] input').setValue('')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-test="folder-projects"]').attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
+  })
+
   test('renders the empty workspace state without Element Plus chrome', () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {

@@ -33,6 +33,7 @@ const emit = defineEmits<{
 const fileTreeQuery = ref('')
 const workspaceRootCollapsed = ref(false)
 const contextMenu = ref<ContextMenuState | null>(null)
+const isFiltering = computed(() => fileTreeQuery.value.trim().length > 0)
 
 const workspaceTree = computed<main.FileNode[]>(() => {
   if (!props.workspaceName) {
@@ -243,6 +244,7 @@ function runContextAction(action: ContextActionKey) {
           :depth="0"
           :active-file-path="activeFilePath"
           :expanded-path-set="expandedPathSet"
+          :force-expanded="isFiltering"
           @select-file="selectFile"
           @toggle-folder="toggleFolder"
           @open-context-menu="openContextMenu"
