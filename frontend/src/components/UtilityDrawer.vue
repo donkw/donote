@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ElDrawer } from 'element-plus'
+import { NDrawer, NDrawerContent } from 'naive-ui'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AttachmentDirectories } from '../lib/attachmentDirectories'
 import type { LayoutFontSizeArea, LayoutFontSizes } from '../lib/layoutFontSizes'
 import type { OutlineItem } from '../lib/outline'
@@ -32,6 +33,17 @@ const titles: Record<UtilityPanel, string> = {
   settings: '设置',
 }
 
+const drawerHost = ref<HTMLElement | null>(null)
+const drawerTeleportTarget = document.createElement('div')
+
+onMounted(() => {
+  drawerHost.value?.appendChild(drawerTeleportTarget)
+})
+
+onBeforeUnmount(() => {
+  drawerTeleportTarget.remove()
+})
+
 function emitFontSize(area: LayoutFontSizeArea, value: number) {
   emit('update-font-size', area, value)
 }
@@ -54,32 +66,34 @@ function emitSelectWorkspace() {
 </script>
 
 <template>
-  <ElDrawer
+  <div ref="drawerHost" />
+  <NDrawer
     v-if="modelValue"
     class="utility-drawer"
-    :model-value="modelValue"
-    :title="titles[activePanel]"
-    destroy-on-close
-    direction="rtl"
-    size="320px"
-    @update:model-value="$emit('update:modelValue', $event)"
+    :show="modelValue"
+    :to="drawerTeleportTarget"
+    placement="right"
+    :width="320"
+    @update:show="$emit('update:modelValue', $event)"
   >
-    <OutlinePanel
-      v-if="activePanel === 'outline'"
-      :items="props.outline"
-      :font-size="props.outlineFontSize"
-    />
-    <SettingsPanel
-      v-else
-      :model-value="layoutFontSizes"
-      :workspace-root="workspaceRoot"
-      :editor-width="editorWidth"
-      :attachment-directories="attachmentDirectories"
-      @update-font-size="emitFontSize"
-      @update-editor-width="emitEditorWidth"
-      @update-attachment-directory="emitAttachmentDirectory"
-      @select-attachment-directory="emitSelectAttachmentDirectory"
-      @select-workspace="emitSelectWorkspace"
-    />
-  </ElDrawer>
+    <NDrawerContent :title="titles[activePanel]" closable>
+      <OutlinePanel
+        v-if="activePanel === 'outline'"
+        :items="props.outline"
+        :font-size="props.outlineFontSize"
+      />
+      <SettingsPanel
+        v-else
+        :model-value="layoutFontSizes"
+        :workspace-root="workspaceRoot"
+        :editor-width="editorWidth"
+        :attachment-directories="attachmentDirectories"
+        @update-font-size="emitFontSize"
+        @update-editor-width="emitEditorWidth"
+        @update-attachment-directory="emitAttachmentDirectory"
+        @select-attachment-directory="emitSelectAttachmentDirectory"
+        @select-workspace="emitSelectWorkspace"
+      />
+    </NDrawerContent>
+  </NDrawer>
 </template>

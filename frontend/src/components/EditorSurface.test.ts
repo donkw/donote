@@ -99,6 +99,8 @@ describe('EditorSurface', () => {
 
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
     expect(wrapper.find('button').exists()).toBe(false)
+    expect(wrapper.find('.n-empty').exists()).toBe(true)
+    expect(wrapper.find('.el-empty').exists()).toBe(false)
     expect(wrapper.emitted('open-workspace')).toBeUndefined()
   })
 })

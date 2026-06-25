@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElEmpty } from 'element-plus'
+import { NEmpty } from 'naive-ui'
 import type { OpenDocument } from '../types/app'
 import MilkdownEditor from './MilkdownEditor.vue'
 
@@ -43,6 +43,6 @@ defineEmits<{
       />
     </template>
 
-    <ElEmpty v-else class="empty-state" description="选择一个笔记文件夹开始写作" />
+    <NEmpty v-else class="empty-state" description="选择一个笔记文件夹开始写作" />
   </section>
 </template>

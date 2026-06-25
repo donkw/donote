@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElEmpty, ElScrollbar } from 'element-plus'
+import { NEmpty, NScrollbar } from 'naive-ui'
 import type { OutlineItem } from '../lib/outline'
 
 defineProps<{
@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <ElScrollbar class="utility-panel-scroll">
+  <NScrollbar class="utility-panel-scroll">
     <div class="utility-panel outline-panel-content" :style="{ '--outline-font-size': `${fontSize}px` }">
       <h2>大纲</h2>
       <div v-if="items.length" class="outline-list">
@@ -23,7 +23,7 @@ defineProps<{
           {{ item.text }}
         </button>
       </div>
-      <ElEmpty v-else description="当前笔记没有标题" :image-size="56" />
+      <NEmpty v-else description="当前笔记没有标题" :image-size="56" />
     </div>
-  </ElScrollbar>
+  </NScrollbar>
 </template>
