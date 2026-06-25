@@ -20,13 +20,15 @@ const naiveMocks = vi.hoisted(() => {
   const message = {
     error: vi.fn(),
   }
+  const unmount = vi.fn()
 
   return {
     capturedDialogs,
-    createDiscreteApi: vi.fn(() => ({ dialog, message })),
+    createDiscreteApi: vi.fn(() => ({ dialog, message, unmount })),
     darkTheme: { name: 'dark' },
     dialog,
     message,
+    unmount,
   }
 })
 
@@ -52,6 +54,7 @@ describe('createAppFeedback', () => {
     naiveMocks.dialog.warning.mockClear()
     naiveMocks.dialog.error.mockClear()
     naiveMocks.message.error.mockClear()
+    naiveMocks.unmount.mockClear()
   })
 
   test('confirm disables implicit mask and escape dismissal', async () => {
@@ -83,5 +86,14 @@ describe('createAppFeedback', () => {
     ;(negativeDialog.onNegativeClick as () => void)()
 
     await expect(negativePromise).rejects.toThrow('cancelled')
+  })
+
+  test('destroy unmounts the discrete feedback app once', () => {
+    const feedback = createAppFeedback(ref('light'), vi.fn())
+
+    feedback.destroy()
+    feedback.destroy()
+
+    expect(naiveMocks.unmount).toHaveBeenCalledTimes(1)
   })
 })

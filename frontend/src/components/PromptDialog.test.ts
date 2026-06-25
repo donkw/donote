@@ -109,4 +109,16 @@ describe('PromptDialog', () => {
 
     await expect(result).resolves.toBeNull()
   })
+
+  test('implicit modal dismissal after leave resolves the active prompt with null', async () => {
+    const wrapper = mountPromptDialog()
+    const requestPrompt = (wrapper.vm as unknown as PromptDialogExpose).requestPrompt
+
+    const result = requestPrompt(promptOptions)
+    await nextTick()
+
+    wrapper.getComponent({ name: 'NModal' }).vm.$emit('after-leave')
+
+    await expect(result).resolves.toBeNull()
+  })
 })

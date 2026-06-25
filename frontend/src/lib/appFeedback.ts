@@ -26,15 +26,17 @@ export type AppFeedback = {
   confirm(options: ConfirmOptions): Promise<void>
   prompt(options: PromptOptions): Promise<string | null>
   error(message: string): void
+  destroy(): void
 }
 
 export function createAppFeedback(theme: Ref<ThemeMode>, prompt: PromptHandler): AppFeedback {
-  const { message, dialog } = createDiscreteApi(['message', 'dialog'], {
+  const { message, dialog, unmount } = createDiscreteApi(['message', 'dialog'], {
     configProviderProps: computed(() => ({
       theme: theme.value === 'dark' ? darkTheme : null,
       themeOverrides: createNaiveThemeOverrides(theme.value),
     })),
   })
+  let destroyed = false
 
   return {
     confirm(options) {
@@ -71,6 +73,13 @@ export function createAppFeedback(theme: Ref<ThemeMode>, prompt: PromptHandler):
     prompt,
     error(messageText) {
       message.error(messageText)
+    },
+    destroy() {
+      if (destroyed) {
+        return
+      }
+      destroyed = true
+      unmount()
     },
   }
 }

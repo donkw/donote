@@ -26,6 +26,7 @@ const appFeedbackMocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   prompt: vi.fn(),
   error: vi.fn(),
+  destroy: vi.fn(),
 }))
 const runtimeMocks = vi.hoisted(() => {
   const events = new Map<string, (...args: unknown[]) => void>()
@@ -190,6 +191,14 @@ describe('App shell', () => {
 
     expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
+  })
+
+  test('destroys app feedback when the shell unmounts', () => {
+    const wrapper = mount(App)
+
+    wrapper.unmount()
+
+    expect(appFeedbackMocks.destroy).toHaveBeenCalledTimes(1)
   })
 
   test('prompts for a workspace on first startup', async () => {

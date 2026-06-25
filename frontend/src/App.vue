@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   CreateFolder,
   CreateMarkdown,
@@ -202,6 +202,10 @@ onBeforeUnmount(() => {
   while (menuEventCleanups.length) {
     menuEventCleanups.pop()?.()
   }
+})
+
+onUnmounted(() => {
+  feedback.destroy()
 })
 
 async function initializeApp() {
