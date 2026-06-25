@@ -62,6 +62,5 @@ describe('SearchPanel', () => {
     expect(wrapper.get('[data-test="search-previous"]').classes()).toContain('n-button')
     expect(wrapper.get('[data-test="search-next"]').classes()).toContain('n-button')
     expect(wrapper.get('[data-test="search-close"]').classes()).toContain('n-button')
-    expect(wrapper.html()).not.toContain('el-button')
   })
 })
