@@ -15,14 +15,17 @@ const inputRef = ref<InstanceType<typeof NInput> | null>(null)
 let resolver: ((value: string | null) => void) | null = null
 
 async function requestPrompt(nextOptions: PromptOptions): Promise<string | null> {
+  resolver?.(null)
+  resolver = null
   options.value = nextOptions
   value.value = nextOptions.initialValue
   open.value = true
-  await nextTick()
-  inputRef.value?.focus()
-  return new Promise((resolve) => {
+  const promptResult = new Promise<string | null>((resolve) => {
     resolver = resolve
   })
+  await nextTick()
+  inputRef.value?.focus()
+  return promptResult
 }
 
 function resolvePrompt(result: string | null) {

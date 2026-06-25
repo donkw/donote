@@ -39,21 +39,32 @@ export function createAppFeedback(theme: Ref<ThemeMode>, prompt: PromptHandler):
   return {
     confirm(options) {
       return new Promise<void>((resolve, reject) => {
+        let settled = false
+        const settle = (next: () => void) => {
+          if (settled) {
+            return
+          }
+          settled = true
+          next()
+        }
+        const cancel = () => {
+          settle(() => {
+            reject(new Error('cancelled'))
+          })
+        }
         const createDialog = options.type === 'error' ? dialog.error : dialog.warning
         createDialog({
           title: options.title,
           content: options.content,
           positiveText: options.positiveText,
           negativeText: options.negativeText,
+          maskClosable: false,
+          closeOnEsc: false,
           onPositiveClick: () => {
-            resolve()
+            settle(resolve)
           },
-          onNegativeClick: () => {
-            reject(new Error('cancelled'))
-          },
-          onClose: () => {
-            reject(new Error('cancelled'))
-          },
+          onNegativeClick: cancel,
+          onClose: cancel,
         })
       })
     },
