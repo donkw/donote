@@ -9,12 +9,14 @@ import {
   CreateMarkdown,
   DeletePath,
   ListWorkspace,
+  LoadSettings,
   OpenWorkspace,
   ReadMarkdown,
   RenamePath,
   ResolveImageSource,
   SaveAttachment,
   SaveMarkdown,
+  SaveSettings,
   SelectAttachmentDirectory,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -51,6 +53,8 @@ vi.mock('../wailsjs/go/main/App', () => ({
   ResolveImageSource: vi.fn(),
   SaveAttachment: vi.fn(),
   SelectAttachmentDirectory: vi.fn(),
+  LoadSettings: vi.fn(),
+  SaveSettings: vi.fn(),
 }))
 
 vi.mock('../wailsjs/runtime/runtime', () => ({
@@ -166,6 +170,15 @@ async function waitForAssertion(assertion: () => void) {
   throw lastError
 }
 
+function mockSettingsValues(values: Record<string, string>) {
+  vi.mocked(LoadSettings).mockResolvedValue({ values } as any)
+}
+
+function latestSavedSettingsValues(): Record<string, string> {
+  const calls = vi.mocked(SaveSettings).mock.calls
+  return (calls.at(-1)?.[0] as { values?: Record<string, string> } | undefined)?.values ?? {}
+}
+
 describe('App shell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -175,6 +188,10 @@ describe('App shell', () => {
     window.localStorage.clear()
     elementPlusMocks.confirm.mockResolvedValue('confirm')
     elementPlusMocks.prompt.mockResolvedValue({ value: '未命名.md' })
+    vi.mocked(LoadSettings).mockReset()
+    vi.mocked(LoadSettings).mockResolvedValue({ values: {} } as any)
+    vi.mocked(SaveSettings).mockReset()
+    vi.mocked(SaveSettings).mockResolvedValue(undefined)
     vi.mocked(SelectWorkspace).mockReset()
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: '',
@@ -209,7 +226,9 @@ describe('App shell', () => {
     expect(SelectWorkspace).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('notes')
     expect(wrapper.text()).toContain('intro.md')
-    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('D:/notes')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.lastWorkspaceRoot']).toBe('D:/notes')
+    })
   })
 
   test('renders the dark command workspace shell without the permanent utility rail', () => {
@@ -229,7 +248,7 @@ describe('App shell', () => {
   })
 
   test('restores the last opened workspace on startup', async () => {
-    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
+    mockSettingsValues({ 'donote.lastWorkspaceRoot': 'D:/notes' })
     vi.mocked(OpenWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -252,11 +271,11 @@ describe('App shell', () => {
   })
 
   test('restores the last opened markdown documents after restoring the workspace', async () => {
-    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
-    window.localStorage.setItem(
-      'donote.openDocuments',
-      '{"rootPath":"D:/notes","paths":["intro.md","next.md"],"activePath":"next.md"}',
-    )
+    mockSettingsValues({
+      'donote.lastWorkspaceRoot': 'D:/notes',
+      'donote.openDocuments':
+        '{"rootPath":"D:/notes","paths":["intro.md","next.md"],"activePath":"next.md"}',
+    })
     vi.mocked(OpenWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -313,7 +332,9 @@ describe('App shell', () => {
 
     expect(wrapper.text()).toContain('notes')
     expect(wrapper.text()).toContain('intro.md')
-    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('D:/notes')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.lastWorkspaceRoot']).toBe('D:/notes')
+    })
 
     await wrapper.get('[data-test="file-intro.md"]').trigger('click')
     await flushPromises()
@@ -766,11 +787,14 @@ describe('App shell', () => {
     expect(wrapper.find('[data-test="folder-projects/archive"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
     expect(wrapper.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual(['projects'])
-    expect(window.localStorage.getItem('donote.treeExpansion')).toBe(
-      '{"D:/notes":["projects/archive"]}',
-    )
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.treeExpansion']).toBe(
+        '{"D:/notes":["projects/archive"]}',
+      )
+    })
 
     wrapper.unmount()
+    mockSettingsValues(latestSavedSettingsValues())
     const reopened = mount(App)
     emitMenuEvent('menu:open-workspace')
     await flushPromises()
@@ -788,7 +812,9 @@ describe('App shell', () => {
       'projects',
       'projects/archive',
     ])
-    expect(window.localStorage.getItem('donote.treeExpansion')).toBe('{"D:/notes":[]}')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.treeExpansion']).toBe('{"D:/notes":[]}')
+    })
   })
 
   test('creates a note in the current workspace without reopening the folder picker', async () => {
@@ -1020,7 +1046,9 @@ describe('App shell', () => {
     expect(RenamePath).toHaveBeenCalledWith('intro.md', 'renamed.md')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-renamed.md"]').exists()).toBe(true)
-    expect(window.localStorage.getItem('donote.openDocuments')).toContain('renamed.md')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.openDocuments']).toContain('renamed.md')
+    })
   })
 
   test('renames a tree folder from the context menu', async () => {
@@ -1112,7 +1140,9 @@ describe('App shell', () => {
     expect(DeletePath).toHaveBeenCalledWith('intro.md')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(false)
-    expect(window.localStorage.getItem('donote.openDocuments')).toBeNull()
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()).not.toHaveProperty('donote.openDocuments')
+    })
   })
 
   test('does not create a note when the Element Plus prompt is cancelled or empty', async () => {
@@ -1225,10 +1255,9 @@ describe('App shell', () => {
   })
 
   test('saves pasted images and files to configured directories and inserts markdown links', async () => {
-    window.localStorage.setItem(
-      'donote.attachmentDirectories',
-      '{"images":"assets/images","files":"assets/files"}',
-    )
+    mockSettingsValues({
+      'donote.attachmentDirectories': '{"images":"assets/images","files":"assets/files"}',
+    })
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1367,18 +1396,52 @@ describe('App shell', () => {
     expect(layoutStyle).toContain('--editor-font-size: 10px')
     expect(layoutStyle).toContain('--outline-font-size: 10px')
     expect(layoutStyle).toContain('--editor-content-width: 1100px')
-    expect(window.localStorage.getItem('donote.layoutFontSizes')).toBe(
-      '{"sidebar":10,"tabs":10,"editor":10,"outline":10}',
-    )
-    expect(window.localStorage.getItem('donote.editorWidth')).toBe('1100')
-    expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(
-      '{"images":"assets/images","files":"assets/files"}',
-    )
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()).toEqual(
+        expect.objectContaining({
+          'donote.layoutFontSizes': '{"sidebar":10,"tabs":10,"editor":10,"outline":10}',
+          'donote.editorWidth': '1100',
+          'donote.attachmentDirectories': '{"images":"assets/images","files":"assets/files"}',
+        }),
+      )
+    })
     expect(wrapper.find('[data-test="font-size-sidebar"]').exists()).toBe(true)
   })
 
+  test('loads startup settings from the local config file and saves setting changes there', async () => {
+    vi.mocked(LoadSettings).mockResolvedValue({
+      values: {
+        'donote.theme': 'light',
+        'donote.layoutFontSizes': '{"sidebar":12,"tabs":11,"editor":18,"outline":14}',
+        'donote.editorWidth': '1040',
+        'donote.sidebarWidth': '372',
+        'donote.attachmentDirectories': '{"images":"assets/images","files":"assets/files"}',
+      },
+    } as any)
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(LoadSettings).toHaveBeenCalledTimes(1)
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(wrapper.get('.app-shell').attributes('style')).toContain('--sidebar-width: 372px')
+    expect(wrapper.get('.app-shell').attributes('style')).toContain('--tabs-font-size: 11px')
+    expect(wrapper.get('.app-shell').attributes('style')).toContain('--editor-content-width: 1040px')
+
+    await wrapper.get('[data-test="utility-settings"]').trigger('click')
+    await wrapper.get('[data-test="font-size-sidebar"] input').setValue(10)
+    await flushPromises()
+
+    expect(SaveSettings).toHaveBeenLastCalledWith({
+      values: expect.objectContaining({
+        'donote.layoutFontSizes': '{"sidebar":10,"tabs":11,"editor":18,"outline":14}',
+      }),
+    })
+    expect(window.localStorage.getItem('donote.layoutFontSizes')).toBeNull()
+  })
+
   test('shows and switches the current workspace from settings', async () => {
-    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
+    mockSettingsValues({ 'donote.lastWorkspaceRoot': 'D:/notes' })
     vi.mocked(OpenWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1414,7 +1477,9 @@ describe('App shell', () => {
     ).toBe('E:/writing')
     expect(wrapper.text()).toContain('writing')
     expect(wrapper.text()).toContain('draft.md')
-    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('E:/writing')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.lastWorkspaceRoot']).toBe('E:/writing')
+    })
   })
 
   test('fills the workspace path from settings when no workspace is open', async () => {
@@ -1449,7 +1514,7 @@ describe('App shell', () => {
   })
 
   test('confirms before switching workspace from settings when documents are dirty', async () => {
-    window.localStorage.setItem('donote.lastWorkspaceRoot', 'D:/notes')
+    mockSettingsValues({ 'donote.lastWorkspaceRoot': 'D:/notes' })
     vi.mocked(OpenWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1503,7 +1568,9 @@ describe('App shell', () => {
 
     expect(SelectWorkspace).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('writing')
-    expect(window.localStorage.getItem('donote.lastWorkspaceRoot')).toBe('E:/writing')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.lastWorkspaceRoot']).toBe('E:/writing')
+    })
   })
 
   test('selects attachment directories through the native directory dialog', async () => {
@@ -1537,13 +1604,17 @@ describe('App shell', () => {
       'assets/files',
     )
 
-    expect(window.localStorage.getItem('donote.attachmentDirectories')).toBe(
-      '{"images":"assets/images","files":"assets/files"}',
-    )
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.attachmentDirectories']).toBe(
+        '{"images":"assets/images","files":"assets/files"}',
+      )
+    })
   })
 
   test('resizes the sidebar by dragging the divider and stores the width', async () => {
     const wrapper = mount(App)
+    await flushPromises()
+
     const shell = wrapper.get('.app-shell')
     const resizer = wrapper.get('[data-test="sidebar-resizer"]')
 
@@ -1554,18 +1625,21 @@ describe('App shell', () => {
     await wrapper.vm.$nextTick()
 
     expect(shell.attributes('style')).toContain('--sidebar-width: 356px')
-    expect(window.localStorage.getItem('donote.sidebarWidth')).toBeNull()
+    expect(latestSavedSettingsValues()['donote.sidebarWidth']).toBeUndefined()
 
     dispatchPointerEvent(window, 'pointerup', { clientX: 356 })
     await wrapper.vm.$nextTick()
 
-    expect(window.localStorage.getItem('donote.sidebarWidth')).toBe('356')
+    await waitForAssertion(() => {
+      expect(latestSavedSettingsValues()['donote.sidebarWidth']).toBe('356')
+    })
   })
 
-  test('uses the saved sidebar width on startup', () => {
-    window.localStorage.setItem('donote.sidebarWidth', '372')
+  test('uses the saved sidebar width on startup', async () => {
+    mockSettingsValues({ 'donote.sidebarWidth': '372' })
 
     const wrapper = mount(App)
+    await flushPromises()
 
     expect(wrapper.get('.app-shell').attributes('style')).toContain(
       '--sidebar-width: 372px',

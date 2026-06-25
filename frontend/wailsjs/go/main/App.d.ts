@@ -10,6 +10,8 @@ export function DeletePath(arg1:string):Promise<void>;
 
 export function ListWorkspace():Promise<Array<main.FileNode>>;
 
+export function LoadSettings():Promise<main.AppSettings>;
+
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceInfo>;
 
 export function ReadMarkdown(arg1:string):Promise<main.Document>;
@@ -21,6 +23,8 @@ export function ResolveImageSource(arg1:string,arg2:string):Promise<string>;
 export function SaveAttachment(arg1:string,arg2:string,arg3:string,arg4:string):Promise<main.Attachment>;
 
 export function SaveMarkdown(arg1:string,arg2:string):Promise<main.SaveResult>;
+
+export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 
 export function SelectAttachmentDirectory(arg1:string):Promise<string>;
 

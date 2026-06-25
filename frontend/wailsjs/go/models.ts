@@ -1,5 +1,17 @@
 export namespace main {
 	
+	export class AppSettings {
+	    values: Record<string, string>;
+
+	    static createFrom(source: any = {}) {
+	        return new AppSettings(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.values = source["values"];
+	    }
+	}
 	export class Attachment {
 	    name: string;
 	    path: string;
@@ -116,4 +128,3 @@ export namespace main {
 	}
 
 }
-

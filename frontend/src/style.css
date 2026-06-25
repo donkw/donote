@@ -42,31 +42,31 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  color: #f0e9df;
-  background: #1c1b1a;
-  --app-bg: #1c1b1a;
-  --surface: #23211f;
-  --surface-muted: #181716;
-  --surface-raised: #2a2724;
-  --border: #34302b;
-  --text: #f0e9df;
-  --text-muted: #a69b8e;
-  --text-subtle: #746b62;
-  --accent: #b97855;
-  --accent-soft: #33231d;
-  --accent-strong: #d8a184;
-  --danger: #f08c7f;
-  --warning: #e7b95a;
+  color: #e8e8e8;
+  background: #050505;
+  --app-bg: #050505;
+  --surface: #0c0c0c;
+  --surface-muted: #070707;
+  --surface-raised: #151515;
+  --border: #252525;
+  --text: #e8e8e8;
+  --text-muted: #a6a6a6;
+  --text-subtle: #707070;
+  --accent: #8f9ba3;
+  --accent-soft: #1a2024;
+  --accent-strong: #c5ccd1;
+  --danger: #e58a8a;
+  --warning: #c6a86b;
   --shadow-soft: 0 20px 48px rgba(0, 0, 0, 0.34);
   --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --focus-ring: 0 0 0 3px rgba(185, 120, 85, 0.18);
+  --focus-ring: 0 0 0 3px rgba(143, 155, 163, 0.18);
   --el-color-primary: var(--accent);
-  --el-color-primary-light-3: #c98d68;
-  --el-color-primary-light-5: #b97855;
-  --el-color-primary-light-7: #704832;
-  --el-color-primary-light-8: #4d3024;
-  --el-color-primary-light-9: #33231d;
-  --el-color-primary-dark-2: #e0b090;
+  --el-color-primary-light-3: #c5ccd1;
+  --el-color-primary-light-5: #8f9ba3;
+  --el-color-primary-light-7: #5f6970;
+  --el-color-primary-light-8: #3a4247;
+  --el-color-primary-light-9: #1a2024;
+  --el-color-primary-dark-2: #d5dadd;
   --el-text-color-primary: var(--text);
   --el-text-color-regular: var(--text-muted);
   --el-text-color-secondary: var(--text-subtle);
@@ -79,7 +79,7 @@
   --el-fill-color-blank: var(--surface);
   --el-bg-color: var(--surface);
   --el-bg-color-overlay: var(--surface-raised);
-  --el-mask-color: rgba(12, 10, 9, 0.66);
+  --el-mask-color: rgba(0, 0, 0, 0.72);
 }
 
 * {
@@ -141,10 +141,10 @@ textarea:focus-visible {
   --el-button-active-text-color: var(--app-bg);
   --el-button-bg-color: var(--accent);
   --el-button-border-color: var(--accent);
-  --el-button-hover-bg-color: #c98d68;
-  --el-button-hover-border-color: #c98d68;
-  --el-button-active-bg-color: #9d6244;
-  --el-button-active-border-color: #9d6244;
+  --el-button-hover-bg-color: #c5ccd1;
+  --el-button-hover-border-color: #c5ccd1;
+  --el-button-active-bg-color: #76838c;
+  --el-button-active-border-color: #76838c;
   color: var(--app-bg);
 }
 
@@ -227,9 +227,9 @@ textarea:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   min-width: 0;
-  min-height: 40px;
-  gap: 10px;
-  padding: 4px 10px;
+  min-height: 34px;
+  gap: 8px;
+  padding: 2px 8px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -247,17 +247,17 @@ textarea:focus-visible {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
-  gap: 6px;
+  gap: 4px;
 }
 
 .command-toolbar .el-button:not(.is-text) {
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
   margin: 0;
   padding: 0;
   border-color: var(--border);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--surface-muted);
   color: var(--text-muted);
 }
@@ -492,7 +492,6 @@ textarea:focus-visible {
 }
 
 .tree-row,
-.file-tree-node,
 .outline-row {
   display: flex;
   align-items: center;
@@ -517,13 +516,20 @@ textarea:focus-visible {
 
 .file-tree-node {
   position: relative;
+  display: grid;
+  grid-template-columns: 16px 20px minmax(0, 1fr);
+  align-items: center;
+  min-height: 32px;
+  gap: 6px;
+  padding: 3px 8px 3px calc(8px + (var(--tree-depth, 0) * 17px));
+  isolation: isolate;
 }
 
 .file-tree-node::before {
   position: absolute;
-  top: 7px;
-  bottom: 7px;
-  left: calc(10px + (var(--tree-depth, 0) * 16px));
+  top: 6px;
+  bottom: 6px;
+  left: calc(15px + (var(--tree-depth, 0) * 17px));
   width: 1px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border), transparent 16%);
@@ -531,8 +537,20 @@ textarea:focus-visible {
   opacity: min(var(--tree-depth, 0), 1);
 }
 
+.file-tree-node::after {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 2px;
+  width: 3px;
+  border-radius: 999px;
+  background: transparent;
+  content: '';
+  transition: background-color 140ms ease;
+}
+
 .file-tree-node.workspace-root {
-  min-height: 32px;
+  min-height: 34px;
   margin-bottom: 5px;
   color: var(--text);
   font-weight: 780;
@@ -542,9 +560,73 @@ textarea:focus-visible {
   display: none;
 }
 
-.file-tree-node svg,
+.file-tree-node:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
 .file-tree-node__name {
   position: relative;
+  z-index: 1;
+}
+
+.file-tree-node__chevron {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 22px;
+  color: var(--text-subtle);
+  transition: color 140ms ease;
+}
+
+.file-tree-node__chevron--spacer {
+  opacity: 0;
+}
+
+.file-tree-node__icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-subtle);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.file-tree-node__icon--workspace {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent), transparent 76%);
+  color: var(--accent-strong);
+}
+
+.file-tree-node__icon--folder {
+  background: color-mix(in srgb, var(--accent-soft), transparent 42%);
+  border-color: color-mix(in srgb, var(--accent), transparent 82%);
+  color: color-mix(in srgb, var(--accent-strong), var(--text-muted) 24%);
+}
+
+.file-tree-node__icon--file {
+  background: color-mix(in srgb, var(--surface), transparent 16%);
+  border-color: color-mix(in srgb, var(--border), transparent 24%);
+  color: var(--text-subtle);
+}
+
+.file-tree-node__label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
 }
 
 .tree-row.folder {
@@ -559,10 +641,36 @@ textarea:focus-visible {
   color: var(--accent-strong);
 }
 
+.file-tree-node.active::after,
+.file-tree .is-current > .el-tree-node__content .file-tree-node::after {
+  background: var(--accent);
+}
+
+.file-tree-node.active .file-tree-node__icon,
+.file-tree .is-current > .el-tree-node__content .file-tree-node .file-tree-node__icon {
+  background: color-mix(in srgb, var(--surface), var(--accent-soft) 64%);
+  border-color: color-mix(in srgb, var(--accent), transparent 58%);
+  color: var(--accent-strong);
+}
+
+.file-tree-node.active .file-tree-node__name,
+.file-tree .is-current > .el-tree-node__content .file-tree-node .file-tree-node__name {
+  font-weight: 760;
+}
+
 .tree-row:hover,
 .outline-row:hover {
   background: color-mix(in srgb, var(--surface), var(--border) 24%);
   color: var(--text);
+}
+
+.file-tree-node:hover .file-tree-node__chevron,
+.file-tree-node:hover .file-tree-node__icon {
+  color: var(--text);
+}
+
+.file-tree-node:active {
+  background: color-mix(in srgb, var(--accent-soft), transparent 38%);
 }
 
 .tree-row svg,
@@ -576,6 +684,15 @@ textarea:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-row,
+  .file-tree-node::after,
+  .file-tree-node__chevron,
+  .file-tree-node__icon {
+    transition: none;
+  }
 }
 
 .file-tree-context-menu {
@@ -641,15 +758,15 @@ textarea:focus-visible {
 .document-tabs.el-tabs {
   grid-row: 1;
   min-width: 0;
-  min-height: 40px;
+  min-height: 34px;
   --el-font-size-base: var(--tabs-font-size, 13px);
   background: var(--surface-muted);
 }
 
 .document-tabs .el-tabs__header {
-  height: 40px;
+  height: 34px;
   margin: 0;
-  padding: 7px 32px 0;
+  padding: 5px 28px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -659,14 +776,14 @@ textarea:focus-visible {
 
 .document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item {
   position: relative;
-  max-width: 210px;
-  height: 33px;
-  margin-right: 6px;
-  padding: 0 10px;
+  max-width: 190px;
+  height: 29px;
+  margin-right: 4px;
+  padding: 0 8px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border), transparent 22%);
   border-bottom: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 7px 7px 0 0;
   background: color-mix(in srgb, var(--surface-muted), var(--app-bg) 18%);
   color: var(--text-subtle);
   font-size: var(--tabs-font-size, 13px);
@@ -707,7 +824,7 @@ textarea:focus-visible {
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
-  gap: 7px;
+  gap: 5px;
 }
 
 .document-tab-label > span:not(.dirty-mark) {
@@ -732,12 +849,12 @@ textarea:focus-visible {
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  margin-left: 2px;
+  width: 18px;
+  height: 18px;
+  margin-left: 1px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
   color: var(--text-subtle);
   cursor: pointer;

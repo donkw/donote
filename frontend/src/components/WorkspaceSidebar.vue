@@ -2,9 +2,10 @@
 import {
   ChevronDown,
   ChevronRight,
-  FileText,
-  Folder,
+  FilePenLine,
+  FolderClosed,
   FolderOpen,
+  NotebookTabs,
   Search,
 } from '@lucide/vue'
 import { ElEmpty, ElInput, ElScrollbar, ElTree } from 'element-plus'
@@ -163,6 +164,19 @@ function treeNodeTestId(node: main.FileNode) {
   return node.type === 'file' ? `file-${node.path}` : `folder-${node.path}`
 }
 
+function treeNodeTitle(node: main.FileNode) {
+  return node.path === workspaceRootPath ? node.name : node.path
+}
+
+function treeNodeAriaLabel(node: main.FileNode, expanded: boolean) {
+  if (node.type === 'file') {
+    return `打开文件 ${node.name}`
+  }
+
+  const nodeKind = node.path === workspaceRootPath ? '工作区' : '文件夹'
+  return `${expanded ? '折叠' : '展开'}${nodeKind} ${node.name}`
+}
+
 function openContextMenu(event: MouseEvent, node: main.FileNode) {
   event.preventDefault()
   event.stopPropagation()
@@ -264,18 +278,58 @@ function handleFolderExpansionChange(node: main.FileNode, expanded: boolean) {
               'workspace-root': data.path === workspaceRootPath,
               active: data.path === activeFilePath,
             }"
+            :aria-current="data.path === activeFilePath ? 'page' : undefined"
+            :aria-expanded="data.type === 'folder' ? node.expanded : undefined"
+            :aria-label="treeNodeAriaLabel(data, node.expanded)"
             :data-test="treeNodeTestId(data)"
             :style="treeNodeStyle(node.level)"
+            :title="treeNodeTitle(data)"
             type="button"
             @click.stop="handleNodeClick(data)"
             @contextmenu.prevent.stop="openContextMenu($event, data)"
           >
-            <ChevronRight v-if="data.type === 'folder' && !node.expanded" :size="14" />
-            <ChevronDown v-else-if="data.type === 'folder'" :size="14" />
-            <FolderOpen v-if="data.type === 'folder' && node.expanded" :size="14" />
-            <Folder v-else-if="data.type === 'folder'" :size="14" />
-            <FileText v-else :size="14" />
-            <span class="file-tree-node__name">{{ data.name }}</span>
+            <span
+              class="file-tree-node__chevron"
+              :class="{ 'file-tree-node__chevron--spacer': data.type !== 'folder' }"
+              aria-hidden="true"
+            >
+              <ChevronRight
+                v-if="data.type === 'folder' && !node.expanded"
+                :size="14"
+                :stroke-width="2.15"
+              />
+              <ChevronDown v-else-if="data.type === 'folder'" :size="14" :stroke-width="2.15" />
+            </span>
+            <span
+              class="file-tree-node__icon"
+              :class="{
+                'file-tree-node__icon--workspace': data.path === workspaceRootPath,
+                'file-tree-node__icon--folder':
+                  data.type === 'folder' && data.path !== workspaceRootPath,
+                'file-tree-node__icon--file': data.type === 'file',
+              }"
+              aria-hidden="true"
+            >
+              <NotebookTabs
+                v-if="data.path === workspaceRootPath"
+                :size="15"
+                :stroke-width="1.9"
+              />
+              <FolderOpen
+                v-else-if="data.type === 'folder' && node.expanded"
+                :size="15"
+                :stroke-width="1.9"
+              />
+              <FolderClosed
+                v-else-if="data.type === 'folder'"
+                :size="15"
+                :stroke-width="1.9"
+              />
+              <FilePenLine v-else :size="15" :stroke-width="1.9" />
+            </span>
+            <span class="file-tree-node__label">
+              <span class="file-tree-node__name">{{ data.name }}</span>
+            </span>
           </button>
         </template>
       </ElTree>

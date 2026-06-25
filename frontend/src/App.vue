@@ -7,12 +7,14 @@ import {
   CreateMarkdown,
   DeletePath,
   ListWorkspace,
+  LoadSettings,
   OpenWorkspace,
   ReadMarkdown,
   RenamePath,
   ResolveImageSource,
   SaveAttachment,
   SaveMarkdown,
+  SaveSettings,
   SelectAttachmentDirectory,
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
@@ -24,18 +26,22 @@ import SearchPanel from './components/SearchPanel.vue'
 import CommandToolbar from './components/CommandToolbar.vue'
 import UtilityDrawer from './components/UtilityDrawer.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
+import { createAppSettingsStorage } from './lib/appSettingsStorage'
 import {
+  attachmentDirectoriesStorageKey,
   getInitialAttachmentDirectories,
   saveAttachmentDirectories,
   type AttachmentDirectories,
 } from './lib/attachmentDirectories'
 import {
+  editorWidthStorageKey,
   getInitialEditorWidth,
   normalizeEditorWidth,
   saveEditorWidth,
 } from './lib/editorWidth'
 import {
   getInitialLayoutFontSizes,
+  layoutFontSizeStorageKey,
   saveLayoutFontSizes,
   type LayoutFontSizeArea,
 } from './lib/layoutFontSizes'
@@ -43,6 +49,7 @@ import { isDocumentDirty } from './lib/markdownDirty'
 import {
   clearOpenDocumentSession,
   getInitialOpenDocumentSession,
+  openDocumentSessionStorageKey,
   saveOpenDocumentSession,
 } from './lib/openDocumentSession'
 import { extractOutline } from './lib/outline'
@@ -51,12 +58,40 @@ import {
   getInitialSidebarWidth,
   normalizeSidebarWidth,
   saveSidebarWidth,
+  sidebarWidthStorageKey,
 } from './lib/sidebarWidth'
-import { applyTheme, getInitialTheme, toggleTheme, type ThemeMode } from './lib/theme'
-import { getInitialCollapsedFolderPaths, saveCollapsedFolderPaths } from './lib/treeExpansion'
+import {
+  applyTheme,
+  getInitialTheme,
+  themeStorageKey,
+  toggleTheme,
+  type ThemeMode,
+} from './lib/theme'
+import {
+  getInitialCollapsedFolderPaths,
+  saveCollapsedFolderPaths,
+  treeExpansionStorageKey,
+} from './lib/treeExpansion'
 import type { OpenDocument, SaveState, UtilityPanel } from './types/app'
 
 const lastWorkspaceStorageKey = 'donote.lastWorkspaceRoot'
+const settingsStorageKeys = [
+  themeStorageKey,
+  lastWorkspaceStorageKey,
+  layoutFontSizeStorageKey,
+  editorWidthStorageKey,
+  attachmentDirectoriesStorageKey,
+  openDocumentSessionStorageKey,
+  sidebarWidthStorageKey,
+  treeExpansionStorageKey,
+]
+
+let settingsReady = false
+const settingsStorage = createAppSettingsStorage(undefined, () => {
+  if (settingsReady) {
+    persistSettings()
+  }
+})
 
 const workspace = ref<main.WorkspaceInfo | null>(null)
 const openDocuments = ref<OpenDocument[]>([])
@@ -69,12 +104,12 @@ const activeUtilityPanel = ref<UtilityPanel>('outline')
 const showUtilityDrawer = ref(false)
 const searchQuery = ref('')
 const activeSearchIndex = ref(-1)
-const theme = ref<ThemeMode>(getInitialTheme())
+const theme = ref<ThemeMode>(getInitialTheme(settingsStorage))
 const loadingDocument = ref(false)
-const layoutFontSizes = ref(getInitialLayoutFontSizes())
-const editorWidth = ref(getInitialEditorWidth())
-const attachmentDirectories = ref(getInitialAttachmentDirectories())
-const sidebarWidth = ref(getInitialSidebarWidth())
+const layoutFontSizes = ref(getInitialLayoutFontSizes(settingsStorage))
+const editorWidth = ref(getInitialEditorWidth(settingsStorage))
+const attachmentDirectories = ref(getInitialAttachmentDirectories(settingsStorage))
+const sidebarWidth = ref(getInitialSidebarWidth(settingsStorage))
 const isResizingSidebar = ref(false)
 const collapsedFolderPaths = ref<Set<string>>(new Set())
 const menuEventCleanups: Array<() => void> = []
@@ -143,7 +178,6 @@ watch(searchQuery, () => {
 })
 
 onMounted(() => {
-  applyTheme(theme.value)
   window.addEventListener('keydown', handleKeydown)
   menuEventCleanups.push(
     EventsOn('menu:open-workspace', () => {
@@ -153,7 +187,7 @@ onMounted(() => {
       void createNote()
     }),
   )
-  void initializeWorkspace()
+  void initializeApp()
 })
 
 onBeforeUnmount(() => {
@@ -163,6 +197,49 @@ onBeforeUnmount(() => {
     menuEventCleanups.pop()?.()
   }
 })
+
+async function initializeApp() {
+  await initializeSettings()
+  await initializeWorkspace()
+}
+
+async function initializeSettings() {
+  try {
+    settingsStorage.replace(await LoadSettings())
+  } catch (error) {
+    setError(error)
+  }
+
+  migrateLegacyLocalStorageSettings()
+  applyStoredSettings()
+  settingsReady = true
+  persistSettings()
+}
+
+function applyStoredSettings() {
+  theme.value = getInitialTheme(settingsStorage)
+  layoutFontSizes.value = getInitialLayoutFontSizes(settingsStorage)
+  editorWidth.value = getInitialEditorWidth(settingsStorage)
+  attachmentDirectories.value = getInitialAttachmentDirectories(settingsStorage)
+  sidebarWidth.value = getInitialSidebarWidth(settingsStorage)
+  applyTheme(theme.value, settingsStorage)
+}
+
+function persistSettings() {
+  void SaveSettings(settingsStorage.snapshot()).catch(setError)
+}
+
+function migrateLegacyLocalStorageSettings() {
+  for (const key of settingsStorageKeys) {
+    if (settingsStorage.getItem(key) !== null) {
+      continue
+    }
+    const legacyValue = window.localStorage.getItem(key)
+    if (legacyValue !== null) {
+      settingsStorage.setItem(key, legacyValue)
+    }
+  }
+}
 
 async function initializeWorkspace() {
   const restored = await restoreLastWorkspace()
@@ -200,12 +277,12 @@ async function selectAndApplyWorkspace(): Promise<main.WorkspaceInfo | null> {
   }
   applyWorkspaceInfo(selected)
   persistOpenDocumentSession()
-  window.localStorage.setItem(lastWorkspaceStorageKey, selected.rootPath)
+  settingsStorage.setItem(lastWorkspaceStorageKey, selected.rootPath)
   return selected
 }
 
 async function restoreLastWorkspace(): Promise<boolean> {
-  const lastWorkspaceRoot = window.localStorage.getItem(lastWorkspaceStorageKey)
+  const lastWorkspaceRoot = settingsStorage.getItem(lastWorkspaceStorageKey)
   if (workspace.value) {
     return true
   }
@@ -220,7 +297,7 @@ async function restoreLastWorkspace(): Promise<boolean> {
     await restoreOpenDocumentsForWorkspace(restored.rootPath)
     return true
   } catch {
-    window.localStorage.removeItem(lastWorkspaceStorageKey)
+    settingsStorage.removeItem(lastWorkspaceStorageKey)
     return false
   } finally {
     loading.value = false
@@ -229,7 +306,7 @@ async function restoreLastWorkspace(): Promise<boolean> {
 
 function applyWorkspaceInfo(info: main.WorkspaceInfo) {
   collapsedFolderPaths.value = new Set(
-    getInitialCollapsedFolderPaths(info.rootPath, collectFolderPaths(info.tree)),
+    getInitialCollapsedFolderPaths(info.rootPath, collectFolderPaths(info.tree), settingsStorage),
   )
   workspace.value = info
   openDocuments.value = []
@@ -239,7 +316,7 @@ function applyWorkspaceInfo(info: main.WorkspaceInfo) {
 }
 
 async function restoreOpenDocumentsForWorkspace(rootPath: string) {
-  const session = getInitialOpenDocumentSession()
+  const session = getInitialOpenDocumentSession(settingsStorage)
   if (!session || session.rootPath !== rootPath) {
     return
   }
@@ -517,7 +594,7 @@ function toggleEditorSearch() {
 }
 
 function switchTheme() {
-  theme.value = toggleTheme(theme.value)
+  theme.value = toggleTheme(theme.value, settingsStorage)
 }
 
 function startSidebarResize(event: PointerEvent) {
@@ -547,7 +624,7 @@ function finishSidebarResize() {
     return
   }
   isResizingSidebar.value = false
-  sidebarWidth.value = saveSidebarWidth(sidebarWidth.value)
+  sidebarWidth.value = saveSidebarWidth(sidebarWidth.value, settingsStorage)
   removeSidebarResizeListeners()
 }
 
@@ -574,18 +651,18 @@ function setLayoutFontSize(area: LayoutFontSizeArea, value: number) {
   layoutFontSizes.value = saveLayoutFontSizes({
     ...layoutFontSizes.value,
     [area]: value,
-  })
+  }, settingsStorage)
 }
 
 function setEditorWidth(value: number) {
-  editorWidth.value = saveEditorWidth(normalizeEditorWidth(value))
+  editorWidth.value = saveEditorWidth(normalizeEditorWidth(value), settingsStorage)
 }
 
 function setAttachmentDirectory(key: keyof AttachmentDirectories, value: string) {
   attachmentDirectories.value = saveAttachmentDirectories({
     ...attachmentDirectories.value,
     [key]: value,
-  })
+  }, settingsStorage)
 }
 
 async function selectAttachmentDirectory(key: keyof AttachmentDirectories) {
@@ -690,7 +767,7 @@ function createOpenDocument(document: main.Document): OpenDocument {
 
 function persistOpenDocumentSession() {
   if (!workspace.value) {
-    clearOpenDocumentSession()
+    clearOpenDocumentSession(settingsStorage)
     return
   }
 
@@ -698,7 +775,7 @@ function persistOpenDocumentSession() {
     rootPath: workspace.value.rootPath,
     paths: openDocuments.value.map((document) => document.path),
     activePath: activeDocumentPath.value,
-  })
+  }, settingsStorage)
 }
 
 function findTreeNode(path: string, nodes = workspace.value?.tree ?? []): main.FileNode | null {
@@ -768,7 +845,7 @@ function setFolderCollapsed(path: string, collapsed: boolean) {
   if (collapsed) next.add(path)
   else next.delete(path)
   collapsedFolderPaths.value = next
-  saveCollapsedFolderPaths(workspace.value.rootPath, [...next])
+  saveCollapsedFolderPaths(workspace.value.rootPath, [...next], settingsStorage)
 }
 
 function updateCollapsedFolderPathsAfterRename(oldPath: string, newPath: string) {
@@ -783,7 +860,7 @@ function updateCollapsedFolderPathsAfterRename(oldPath: string, newPath: string)
     return path
   })
   collapsedFolderPaths.value = new Set(next)
-  saveCollapsedFolderPaths(workspace.value.rootPath, next)
+  saveCollapsedFolderPaths(workspace.value.rootPath, next, settingsStorage)
 }
 
 function updateCollapsedFolderPathsAfterDelete(path: string) {
@@ -792,7 +869,7 @@ function updateCollapsedFolderPathsAfterDelete(path: string) {
     (collapsedPath) => !isPathInsideTreeItem(collapsedPath, path),
   )
   collapsedFolderPaths.value = new Set(next)
-  saveCollapsedFolderPaths(workspace.value.rootPath, next)
+  saveCollapsedFolderPaths(workspace.value.rootPath, next, settingsStorage)
 }
 
 function isCollapsedOrInsideCollapsedFolder(path: string, collapsedPaths: Set<string>) {

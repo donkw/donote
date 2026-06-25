@@ -25,6 +25,33 @@ function expectCssVariable(block: string, name: string, value: string) {
   expect(block).toMatch(new RegExp(`${name}:\\s*${value.replaceAll('#', '\\#')}\\b`))
 }
 
+function cssVariable(block: string, name: string) {
+  return block.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})\\b`))?.[1] ?? ''
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (hex: string) => {
+    const channels = hex
+      .slice(1)
+      .match(/.{2}/g)
+      ?.map((value) => {
+        const channel = Number.parseInt(value, 16) / 255
+        return channel <= 0.03928
+          ? channel / 12.92
+          : ((channel + 0.055) / 1.055) ** 2.4
+      })
+
+    if (!channels) {
+      return 0
+    }
+    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+  }
+
+  const lighter = Math.max(luminance(foreground), luminance(background))
+  const darker = Math.min(luminance(foreground), luminance(background))
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
 function expectSelectorExclusions(selector: string) {
   expect(selector).toContain(':not(.is-disabled)')
   expect(selector).toContain(':not([disabled])')
@@ -57,23 +84,41 @@ describe('Dark command workspace styles', () => {
   test('uses the selected dark command palette for the dark theme', () => {
     const block = cssBlock(":root[data-theme='dark']")
 
-    expectCssVariable(block, '--app-bg', '#1c1b1a')
-    expectCssVariable(block, '--surface', '#23211f')
-    expectCssVariable(block, '--surface-muted', '#181716')
-    expectCssVariable(block, '--border', '#34302b')
-    expectCssVariable(block, '--accent', '#b97855')
-    expectCssVariable(block, '--accent-soft', '#33231d')
-    expectCssVariable(block, '--accent-strong', '#d8a184')
+    expectCssVariable(block, '--app-bg', '#050505')
+    expectCssVariable(block, '--surface', '#0c0c0c')
+    expectCssVariable(block, '--surface-muted', '#070707')
+    expectCssVariable(block, '--surface-raised', '#151515')
+    expectCssVariable(block, '--border', '#252525')
+    expectCssVariable(block, '--accent', '#8f9ba3')
+    expectCssVariable(block, '--accent-soft', '#1a2024')
+    expectCssVariable(block, '--accent-strong', '#c5ccd1')
     expect(block).not.toContain('--border-strong')
+  })
+
+  test('keeps the dark theme readable against editor and sidebar surfaces', () => {
+    const block = cssBlock(":root[data-theme='dark']")
+
+    expect(contrastRatio(cssVariable(block, '--text'), cssVariable(block, '--surface'))).toBeGreaterThanOrEqual(
+      4.5,
+    )
+    expect(
+      contrastRatio(cssVariable(block, '--text-muted'), cssVariable(block, '--surface-muted')),
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(cssVariable(block, '--accent-strong'), cssVariable(block, '--accent-soft')),
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(cssVariable(block, '--accent'), cssVariable(block, '--app-bg'))).toBeGreaterThanOrEqual(
+      4.5,
+    )
   })
 
   test('keeps dark primary button highlight states in the accent family', () => {
     const block = cssBlock(":root[data-theme='dark'] .el-button--primary")
 
-    expect(block).toMatch(/--el-button-hover-bg-color:\s*#c98d68/)
-    expect(block).toMatch(/--el-button-hover-border-color:\s*#c98d68/)
-    expect(block).toMatch(/--el-button-active-bg-color:\s*#9d6244/)
-    expect(block).toMatch(/--el-button-active-border-color:\s*#9d6244/)
+    expect(block).toMatch(/--el-button-hover-bg-color:\s*#c5ccd1/)
+    expect(block).toMatch(/--el-button-hover-border-color:\s*#c5ccd1/)
+    expect(block).toMatch(/--el-button-active-bg-color:\s*#76838c/)
+    expect(block).toMatch(/--el-button-active-border-color:\s*#76838c/)
   })
 
   test('defines focused command workspace styling hooks for the main surfaces', () => {
@@ -115,6 +160,17 @@ describe('Dark command workspace styles', () => {
     expect(block).toMatch(/font-size:\s*var\(--sidebar-font-size,\s*13px\)/)
   })
 
+  test('keeps file tree rows structured and keyboard-visible', () => {
+    expect(cssBlock('.file-tree-node')).toMatch(/display:\s*grid\b/)
+    expect(cssBlock('.file-tree-node')).toMatch(
+      /grid-template-columns:\s*16px 20px minmax\(0,\s*1fr\)/,
+    )
+    expect(cssBlock('.file-tree-node:focus-visible')).toMatch(/box-shadow:\s*var\(--focus-ring\)/)
+    expect(cssBlock('.file-tree-node__chevron')).toMatch(/width:\s*16px/)
+    expect(cssBlock('.file-tree-node__icon')).toMatch(/width:\s*20px/)
+    expect(cssBlock('.file-tree-node__label')).toMatch(/min-width:\s*0/)
+  })
+
   test('positions the editor format toolbar on the right side of the editor', () => {
     const shellBlock = cssBlock('.milkdown-shell')
     const toolbarBlock = cssBlock('.editor-format-toolbar')
@@ -130,15 +186,37 @@ describe('Dark command workspace styles', () => {
     const actionsBlock = cssBlock('.command-actions')
     const buttonBlock = cssBlock('.command-toolbar .el-button:not(.is-text)')
 
-    expect(toolbarBlock).toMatch(/min-height:\s*40px/)
-    expect(toolbarBlock).toMatch(/gap:\s*10px/)
-    expect(toolbarBlock).toMatch(/padding:\s*4px 10px/)
+    expect(toolbarBlock).toMatch(/min-height:\s*34px/)
+    expect(toolbarBlock).toMatch(/gap:\s*8px/)
+    expect(toolbarBlock).toMatch(/padding:\s*2px 8px/)
     expect(cssBlock('.command-brand')).toBe('')
     expect(cssBlock('.brand-mark')).toBe('')
-    expect(actionsBlock).toMatch(/gap:\s*6px/)
-    expect(buttonBlock).toMatch(/width:\s*28px/)
-    expect(buttonBlock).toMatch(/height:\s*28px/)
-    expect(buttonBlock).toMatch(/min-height:\s*28px/)
+    expect(actionsBlock).toMatch(/gap:\s*4px/)
+    expect(buttonBlock).toMatch(/width:\s*26px/)
+    expect(buttonBlock).toMatch(/height:\s*26px/)
+    expect(buttonBlock).toMatch(/min-height:\s*26px/)
+  })
+
+  test('keeps document tabs compact', () => {
+    const tabsBlock = cssBlock('.document-tabs.el-tabs')
+    const tabsHeaderBlock = cssBlock('.document-tabs .el-tabs__header')
+    const tabItemBlock = cssBlock('.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item')
+    const tabLabelBlock = cssBlock('.document-tab-label')
+    const closeButtonBlock = cssBlock('.tab-close-button')
+
+    expect(tabsBlock).toMatch(/min-height:\s*34px/)
+    expect(tabsHeaderBlock).toMatch(/height:\s*34px/)
+    expect(tabsHeaderBlock).toMatch(/padding:\s*5px 28px 0/)
+    expect(tabItemBlock).toMatch(/max-width:\s*190px/)
+    expect(tabItemBlock).toMatch(/height:\s*29px/)
+    expect(tabItemBlock).toMatch(/margin-right:\s*4px/)
+    expect(tabItemBlock).toMatch(/padding:\s*0 8px/)
+    expect(tabItemBlock).toMatch(/border-radius:\s*7px 7px 0 0/)
+    expect(tabLabelBlock).toMatch(/gap:\s*5px/)
+    expect(closeButtonBlock).toMatch(/width:\s*18px/)
+    expect(closeButtonBlock).toMatch(/height:\s*18px/)
+    expect(closeButtonBlock).toMatch(/margin-left:\s*1px/)
+    expect(closeButtonBlock).toMatch(/border-radius:\s*5px/)
   })
 
   test('defines readable dark primary button foreground states', () => {

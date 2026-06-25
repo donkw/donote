@@ -29,6 +29,14 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	return false
 }
 
+func (a *App) LoadSettings() AppSettings {
+	return loadSettings()
+}
+
+func (a *App) SaveSettings(settings AppSettings) error {
+	return saveSettings(settings)
+}
+
 func (a *App) SelectWorkspace() (WorkspaceInfo, error) {
 	selectedPath, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "选择笔记文件夹",

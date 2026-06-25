@@ -18,6 +18,10 @@ export function ListWorkspace() {
   return window['go']['main']['App']['ListWorkspace']();
 }
 
+export function LoadSettings() {
+  return window['go']['main']['App']['LoadSettings']();
+}
+
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }
@@ -40,6 +44,10 @@ export function SaveAttachment(arg1, arg2, arg3, arg4) {
 
 export function SaveMarkdown(arg1, arg2) {
   return window['go']['main']['App']['SaveMarkdown'](arg1, arg2);
+}
+
+export function SaveSettings(arg1) {
+  return window['go']['main']['App']['SaveSettings'](arg1);
 }
 
 export function SelectAttachmentDirectory(arg1) {

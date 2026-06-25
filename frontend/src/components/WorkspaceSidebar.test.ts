@@ -58,6 +58,28 @@ describe('WorkspaceSidebar', () => {
     expect(wrapper.get('[data-test="file-projects/archive/plan.md"]').attributes('style')).toContain(
       '--tree-depth: 3',
     )
+
+    const rootRow = wrapper.get('[data-test="workspace-root"]')
+    expect(rootRow.attributes('aria-label')).toBe('折叠工作区 notes')
+    expect(rootRow.attributes('aria-expanded')).toBe('true')
+    expect(rootRow.find('.file-tree-node__icon--workspace').exists()).toBe(true)
+    expect(rootRow.find('.lucide-notebook-tabs').exists()).toBe(true)
+
+    const folderRow = wrapper.get('[data-test="folder-projects"]')
+    expect(folderRow.attributes('aria-label')).toBe('折叠文件夹 projects')
+    expect(folderRow.attributes('aria-expanded')).toBe('true')
+    expect(folderRow.find('.file-tree-node__chevron').exists()).toBe(true)
+    expect(folderRow.find('.file-tree-node__icon--folder').exists()).toBe(true)
+    expect(folderRow.find('.lucide-folder-open').exists()).toBe(true)
+
+    const fileRow = wrapper.get('[data-test="file-projects/archive/plan.md"]')
+    expect(fileRow.attributes('aria-label')).toBe('打开文件 plan.md')
+    expect(fileRow.attributes('aria-current')).toBe('page')
+    expect(fileRow.attributes('title')).toBe('projects/archive/plan.md')
+    expect(fileRow.find('.file-tree-node__chevron--spacer').exists()).toBe(true)
+    expect(fileRow.find('.file-tree-node__icon--file').exists()).toBe(true)
+    expect(fileRow.find('.lucide-file-pen-line').exists()).toBe(true)
+    expect(fileRow.find('.file-tree-node__label').text()).toBe('plan.md')
   })
 
   test('emits select-file with the file path', async () => {
