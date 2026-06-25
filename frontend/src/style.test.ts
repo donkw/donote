@@ -5,16 +5,31 @@ const { readFileSync } = await import(nodeFs)
 const cwd = (globalThis as typeof globalThis & { process: { cwd: () => string } }).process.cwd()
 const stylesheet = readFileSync(`${cwd}/src/style.css`, 'utf8') as string
 
+const legacyPrefix = 'el'
+const legacyClassHooks = [
+  'button',
+  'drawer',
+  'tree',
+  'tabs',
+  'input',
+  'empty',
+  'scrollbar',
+  'textarea',
+].map((hook) => `.${legacyPrefix}-${hook}`)
+
 function cssRule(selector: string) {
-  const selectorIndex = stylesheet.indexOf(selector)
-  const blockStart = selectorIndex >= 0 ? stylesheet.indexOf('{', selectorIndex) : -1
-  const blockEnd = blockStart >= 0 ? stylesheet.indexOf('}', blockStart) : -1
-  const selectorStart = selectorIndex >= 0 ? stylesheet.lastIndexOf('}', selectorIndex) + 1 : -1
-  return {
-    selector:
-      selectorStart >= 0 && blockStart >= 0 ? stylesheet.slice(selectorStart, blockStart).trim() : '',
-    block: blockStart >= 0 && blockEnd >= 0 ? stylesheet.slice(blockStart + 1, blockEnd) : '',
+  for (const match of stylesheet.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectorText = match[1].trim()
+    const selectorList = selectorText.split(',').map((entry) => entry.trim())
+    if (selectorList.includes(selector)) {
+      return {
+        selector: selectorText,
+        block: match[2],
+      }
+    }
   }
+
+  return { selector: '', block: '' }
 }
 
 function cssBlock(selector: string) {
@@ -52,16 +67,6 @@ function contrastRatio(foreground: string, background: string) {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-function expectSelectorExclusions(selector: string) {
-  expect(selector).toContain(':not(.is-disabled)')
-  expect(selector).toContain(':not([disabled])')
-  expect(selector).toContain(':not(.is-text)')
-  expect(selector).toContain(':not(.el-button--success)')
-  expect(selector).toContain(':not(.el-button--warning)')
-  expect(selector).toContain(':not(.el-button--danger)')
-  expect(selector).toContain(':not(.el-button--info)')
-}
-
 describe('editor layout styles', () => {
   test('reserves vertical scrollbar space in the editor scroll container', () => {
     expect(cssBlock('.milkdown-shell')).toMatch(/scrollbar-gutter:\s*stable\b/)
@@ -80,7 +85,14 @@ describe('editor layout styles', () => {
   })
 })
 
-describe('Dark command workspace styles', () => {
+describe('Donote shell styles', () => {
+  test('does not keep legacy component selectors or tokens in the stylesheet', () => {
+    legacyClassHooks.forEach((hook) => {
+      expect(stylesheet).not.toContain(hook)
+    })
+    expect(stylesheet).not.toContain(`--${legacyPrefix}-`)
+  })
+
   test('uses the selected dark command palette for the dark theme', () => {
     const block = cssBlock(":root[data-theme='dark']")
 
@@ -112,15 +124,6 @@ describe('Dark command workspace styles', () => {
     )
   })
 
-  test('keeps dark primary button highlight states in the accent family', () => {
-    const block = cssBlock(":root[data-theme='dark'] .el-button--primary")
-
-    expect(block).toMatch(/--el-button-hover-bg-color:\s*#c5ccd1/)
-    expect(block).toMatch(/--el-button-hover-border-color:\s*#c5ccd1/)
-    expect(block).toMatch(/--el-button-active-bg-color:\s*#76838c/)
-    expect(block).toMatch(/--el-button-active-border-color:\s*#76838c/)
-  })
-
   test('defines focused command workspace styling hooks for the main surfaces', () => {
     expect(cssBlock('.app-shell')).toMatch(
       /grid-template-columns:\s*var\(--sidebar-width\) 8px minmax\(0,\s*1fr\)/,
@@ -140,23 +143,12 @@ describe('Dark command workspace styles', () => {
     const contextMenuBlock = cssBlock('.file-tree-context-menu')
     expect(contextMenuBlock).toMatch(/position:\s*fixed\b/)
     expect(contextMenuBlock).toMatch(/box-shadow:\s*0 18px 44px/)
-    expect(cssBlock('.document-tabs.el-tabs')).toMatch(/background:\s*var\(--surface-muted\)/)
-    const tabItemBlock = cssBlock('.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item')
-    expect(tabItemBlock).toMatch(/color:\s*var\(--text-subtle\)/)
-    expect(tabItemBlock).toMatch(/font-size:\s*var\(--tabs-font-size,\s*13px\)/)
-    const activeTabBlock = cssBlock(
-      '.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item.is-active',
-    )
-    expect(activeTabBlock).toMatch(/border-color:\s*color-mix\(in srgb,\s*var\(--accent\)/)
-    expect(activeTabBlock).toMatch(/color:\s*var\(--accent-strong\)/)
-    expect(activeTabBlock).toMatch(/box-shadow:\s*inset 0 2px 0 var\(--accent\)/)
-    expect(cssBlock('.el-drawer.utility-drawer')).toMatch(/background:\s*var\(--surface\)/)
+    expect(cssBlock('.utility-drawer')).toMatch(/background:\s*var\(--surface\)/)
   })
 
-  test('maps the sidebar font size setting into Element Plus sidebar controls', () => {
+  test('maps the sidebar font size setting into native sidebar controls', () => {
     const block = cssBlock('.workspace-sidebar')
 
-    expect(block).toMatch(/--el-font-size-base:\s*var\(--sidebar-font-size,\s*13px\)/)
     expect(block).toMatch(/font-size:\s*var\(--sidebar-font-size,\s*13px\)/)
   })
 
@@ -181,10 +173,11 @@ describe('Dark command workspace styles', () => {
     expect(toolbarBlock).toMatch(/justify-self:\s*start/)
   })
 
-  test('keeps the top command toolbar compact', () => {
+  test('keeps command buttons square and accent-backed when active', () => {
     const toolbarBlock = cssBlock('.command-toolbar')
     const actionsBlock = cssBlock('.command-actions')
-    const buttonBlock = cssBlock('.command-toolbar .el-button:not(.is-text)')
+    const buttonBlock = cssBlock('.command-button')
+    const activeButtonRule = cssRule('.command-button.active')
 
     expect(toolbarBlock).toMatch(/min-height:\s*34px/)
     expect(toolbarBlock).toMatch(/gap:\s*8px/)
@@ -192,26 +185,37 @@ describe('Dark command workspace styles', () => {
     expect(cssBlock('.command-brand')).toBe('')
     expect(cssBlock('.brand-mark')).toBe('')
     expect(actionsBlock).toMatch(/gap:\s*4px/)
-    expect(buttonBlock).toMatch(/width:\s*26px/)
-    expect(buttonBlock).toMatch(/height:\s*26px/)
-    expect(buttonBlock).toMatch(/min-height:\s*26px/)
+    expect(buttonBlock).toMatch(/width:\s*32px/)
+    expect(buttonBlock).toMatch(/height:\s*32px/)
+    expect(buttonBlock).toMatch(/min-width:\s*32px/)
+    expect(buttonBlock).toMatch(/min-height:\s*32px/)
+    expect(activeButtonRule.selector).toContain('.command-button.command-button--active')
+    expect(activeButtonRule.block).toMatch(/background:\s*var\(--accent-soft\)/)
+    expect(activeButtonRule.block).toMatch(/color:\s*var\(--accent-strong\)/)
   })
 
-  test('keeps document tabs compact', () => {
-    const tabsBlock = cssBlock('.document-tabs.el-tabs')
-    const tabsHeaderBlock = cssBlock('.document-tabs .el-tabs__header')
-    const tabItemBlock = cssBlock('.document-tabs.el-tabs--card > .el-tabs__header .el-tabs__item')
+  test('keeps custom document tabs compact without legacy tab selectors', () => {
+    const tabsBlock = cssBlock('.document-tabs')
+    const trackBlock = cssBlock('.document-tabs__track')
+    const listBlock = cssBlock('.document-tabs__list')
+    const tabItemBlock = cssBlock('.document-tab')
+    const activeTabBlock = cssBlock('.document-tab.active')
     const tabLabelBlock = cssBlock('.document-tab-label')
     const closeButtonBlock = cssBlock('.tab-close-button')
 
+    expect(cssBlock(['.document-tabs', `${legacyPrefix}-tabs`].join('.'))).toBe('')
     expect(tabsBlock).toMatch(/min-height:\s*34px/)
-    expect(tabsHeaderBlock).toMatch(/height:\s*34px/)
-    expect(tabsHeaderBlock).toMatch(/padding:\s*5px 28px 0/)
+    expect(tabsBlock).toMatch(/background:\s*var\(--surface-muted\)/)
+    expect(trackBlock).toMatch(/height:\s*34px/)
+    expect(trackBlock).toMatch(/padding:\s*5px 28px 0/)
+    expect(listBlock).toMatch(/display:\s*flex\b/)
     expect(tabItemBlock).toMatch(/max-width:\s*190px/)
     expect(tabItemBlock).toMatch(/height:\s*29px/)
     expect(tabItemBlock).toMatch(/margin-right:\s*4px/)
-    expect(tabItemBlock).toMatch(/padding:\s*0 8px/)
     expect(tabItemBlock).toMatch(/border-radius:\s*7px 7px 0 0/)
+    expect(activeTabBlock).toMatch(/border-color:\s*color-mix\(in srgb,\s*var\(--accent\)/)
+    expect(activeTabBlock).toMatch(/color:\s*var\(--accent-strong\)/)
+    expect(activeTabBlock).toMatch(/box-shadow:\s*inset 0 2px 0 var\(--accent\)/)
     expect(tabLabelBlock).toMatch(/gap:\s*5px/)
     expect(closeButtonBlock).toMatch(/width:\s*18px/)
     expect(closeButtonBlock).toMatch(/height:\s*18px/)
@@ -219,42 +223,29 @@ describe('Dark command workspace styles', () => {
     expect(closeButtonBlock).toMatch(/border-radius:\s*5px/)
   })
 
-  test('defines readable dark primary button foreground states', () => {
-    const block = cssBlock(":root[data-theme='dark'] .el-button--primary")
+  test('uses native overflow for file tree and utility panel scrolling', () => {
+    const fileTreeScrollBlock = cssBlock('.file-tree-scroll')
+    const utilityPanelScrollBlock = cssBlock('.utility-panel-scroll')
 
-    expect(block).toMatch(/--el-button-text-color:\s*var\(--app-bg\)/)
-    expect(block).toMatch(/--el-button-hover-text-color:\s*var\(--app-bg\)/)
-    expect(block).toMatch(/--el-button-active-text-color:\s*var\(--app-bg\)/)
-    expect(block).toMatch(/color:\s*var\(--app-bg\)/)
+    expect(fileTreeScrollBlock).toMatch(/min-height:\s*0/)
+    expect(fileTreeScrollBlock).toMatch(/height:\s*100%/)
+    expect(fileTreeScrollBlock).toMatch(/overflow:\s*auto/)
+    expect(utilityPanelScrollBlock).toMatch(/min-height:\s*0/)
+    expect(utilityPanelScrollBlock).toMatch(/height:\s*100%/)
+    expect(utilityPanelScrollBlock).toMatch(/overflow:\s*auto/)
   })
 
-  test('keeps generic dark non-primary button overrides away from disabled text and semantic buttons', () => {
-    const selectors = Array.from(
-      stylesheet.matchAll(
-        /:root\[data-theme='dark'\]\s+\.el-button:not\(\.el-button--primary\)[^{]+(?=\{)/g,
-      ),
-      (match) => match[0],
-    )
+  test('keeps search panel controls on native Donote classes', () => {
+    const panelBlock = cssBlock('.search-panel')
+    const closeButtonBlock = cssBlock('.search-close-button')
+    const closeHoverRule = cssRule('.search-close-button:hover')
 
-    expect(selectors.length).toBeGreaterThanOrEqual(2)
-    selectors.forEach(expectSelectorExclusions)
-  })
-
-  test('keeps command toolbar button state styling disabled-safe', () => {
-    const selectors = Array.from(
-      stylesheet.matchAll(/\.command-toolbar\s+\.el-button[^{]+(?=\{)/g),
-      (match) => match[0],
-    ).filter(
-      (selector) =>
-        selector.includes(':hover') ||
-        selector.includes(':focus-visible') ||
-        selector.includes('.el-button--primary'),
-    )
-
-    expect(selectors.length).toBeGreaterThan(0)
-    selectors.forEach((selector) => {
-      expect(selector).toContain(':not(.is-disabled)')
-      expect(selector).toContain(':not([disabled])')
-    })
+    expect(panelBlock).toMatch(/display:\s*flex\b/)
+    expect(panelBlock).toMatch(/min-height:\s*44px/)
+    expect(closeButtonBlock).toMatch(/width:\s*30px/)
+    expect(closeButtonBlock).toMatch(/height:\s*30px/)
+    expect(closeButtonBlock).toMatch(/margin-left:\s*auto/)
+    expect(closeHoverRule.block).toMatch(/background:\s*var\(--surface-muted\)/)
+    expect(closeHoverRule.block).toMatch(/color:\s*var\(--text\)/)
   })
 })
