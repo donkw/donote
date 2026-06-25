@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CreateFolder,
@@ -20,12 +19,15 @@ import {
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
 import { EventsOn } from '../wailsjs/runtime/runtime'
+import AppProviders from './components/AppProviders.vue'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
+import PromptDialog from './components/PromptDialog.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import CommandToolbar from './components/CommandToolbar.vue'
 import UtilityDrawer from './components/UtilityDrawer.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
+import { createAppFeedback } from './lib/appFeedback'
 import { createAppSettingsStorage } from './lib/appSettingsStorage'
 import {
   attachmentDirectoriesStorageKey,
@@ -115,6 +117,10 @@ const collapsedFolderPaths = ref<Set<string>>(new Set())
 const menuEventCleanups: Array<() => void> = []
 const showEditorSearch = ref(false)
 const searchPanel = ref<{ focus: () => void } | null>(null)
+const promptDialog = ref<InstanceType<typeof PromptDialog> | null>(null)
+const feedback = createAppFeedback(theme, (options) =>
+  promptDialog.value?.requestPrompt(options) ?? Promise.resolve(null),
+)
 
 let sidebarResizeStartX = 0
 let sidebarResizeStartWidth = sidebarWidth.value
@@ -381,16 +387,13 @@ async function createNote() {
 async function createMarkdownInTree(parentPath: string) {
   if (!workspace.value) return
   let name = ''
-  try {
-    const result = await ElMessageBox.prompt('请输入笔记名称', '新建笔记', {
-      inputValue: '未命名.md',
-      confirmButtonText: '创建',
-      cancelButtonText: '取消',
-    })
-    name = result.value.trim()
-  } catch {
-    return
-  }
+  const result = await feedback.prompt({
+    title: '新建笔记',
+    initialValue: '未命名.md',
+    positiveText: '创建',
+    negativeText: '取消',
+  })
+  name = result?.trim() ?? ''
   if (!name) return
 
   try {
@@ -408,16 +411,13 @@ async function createMarkdownInTree(parentPath: string) {
 async function createFolderInTree(parentPath: string) {
   if (!workspace.value) return
   let name = ''
-  try {
-    const result = await ElMessageBox.prompt('请输入文件夹名称', '新建子目录', {
-      inputValue: '新建文件夹',
-      confirmButtonText: '创建',
-      cancelButtonText: '取消',
-    })
-    name = result.value.trim()
-  } catch {
-    return
-  }
+  const result = await feedback.prompt({
+    title: '新建子目录',
+    initialValue: '新建文件夹',
+    positiveText: '创建',
+    negativeText: '取消',
+  })
+  name = result?.trim() ?? ''
   if (!name) return
 
   try {
@@ -437,16 +437,13 @@ async function renameTreeNode(path: string) {
   if (!node) return
 
   let name = ''
-  try {
-    const result = await ElMessageBox.prompt('请输入新的名称', '重命名', {
-      inputValue: node.name,
-      confirmButtonText: '重命名',
-      cancelButtonText: '取消',
-    })
-    name = result.value.trim()
-  } catch {
-    return
-  }
+  const result = await feedback.prompt({
+    title: '重命名',
+    initialValue: node.name,
+    positiveText: '重命名',
+    negativeText: '取消',
+  })
+  name = result?.trim() ?? ''
   if (!name) return
 
   try {
@@ -465,9 +462,11 @@ async function deleteTreeNode(path: string) {
   if (!node) return
 
   try {
-    await ElMessageBox.confirm(`删除「${node.name}」？此操作无法撤销。`, '删除项目', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
+    await feedback.confirm({
+      title: '删除项目',
+      content: `删除「${node.name}」？此操作无法撤销。`,
+      positiveText: '删除',
+      negativeText: '取消',
       type: 'warning',
     })
   } catch {
@@ -690,9 +689,11 @@ async function confirmWorkspaceSwitchIfDirty(): Promise<boolean> {
   }
 
   try {
-    await ElMessageBox.confirm('当前工作区有未保存更改，切换后将丢失。', '切换工作目录', {
-      confirmButtonText: '切换',
-      cancelButtonText: '取消',
+    await feedback.confirm({
+      title: '切换工作目录',
+      content: '当前工作区有未保存更改，切换后将丢失。',
+      positiveText: '切换',
+      negativeText: '取消',
       type: 'warning',
     })
     return true
@@ -725,9 +726,11 @@ function switchDocument(path: string) {
 async function closeDocument(document: OpenDocument) {
   if (isDocumentDirty(document)) {
     try {
-      await ElMessageBox.confirm(`「${document.name}」有未保存更改，关闭后将丢失。`, '关闭未保存笔记', {
-        confirmButtonText: '关闭',
-        cancelButtonText: '取消',
+      await feedback.confirm({
+        title: '关闭未保存笔记',
+        content: `「${document.name}」有未保存更改，关闭后将丢失。`,
+        positiveText: '关闭',
+        negativeText: '取消',
         type: 'warning',
       })
     } catch {
@@ -898,15 +901,13 @@ function getMissingAttachmentDirectories(files: File[]) {
 
 async function promptConfigureAttachmentDirectories(missingDirectories: string[]) {
   try {
-    await ElMessageBox.confirm(
-      `粘贴图片或文件前，请先在设置中配置${missingDirectories.join('和')}。`,
-      '未配置附件目录',
-      {
-        confirmButtonText: '去设置',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
+    await feedback.confirm({
+      title: '未配置附件目录',
+      content: `粘贴图片或文件前，请先在设置中配置${missingDirectories.join('和')}。`,
+      positiveText: '去设置',
+      negativeText: '取消',
+      type: 'warning',
+    })
     openUtilityPanel('settings')
   } catch {
     // User dismissed the configuration prompt.
@@ -961,7 +962,7 @@ function setError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
   errorMessage.value = message
   dismissedErrorKey.value = ''
-  ElMessage.error(message)
+  feedback.error(message)
 }
 
 function dismissErrorBanner() {
@@ -970,11 +971,12 @@ function dismissErrorBanner() {
 </script>
 
 <template>
-  <div
-    class="app-shell"
-    :class="{ 'without-sidebar': !showSidebar, 'is-resizing-sidebar': isResizingSidebar }"
-    :style="layoutFontStyle"
-  >
+  <AppProviders :theme="theme">
+    <div
+      class="app-shell"
+      :class="{ 'without-sidebar': !showSidebar, 'is-resizing-sidebar': isResizingSidebar }"
+      :style="layoutFontStyle"
+    >
     <div v-if="visibleErrorMessage" data-test="error-banner" class="error-banner" role="alert">
       <span class="error-banner__message">{{ visibleErrorMessage }}</span>
       <button
@@ -1078,5 +1080,7 @@ function dismissErrorBanner() {
         @select-workspace="selectWorkspaceFromSettings"
       />
     </div>
-  </div>
+    </div>
+    <PromptDialog ref="promptDialog" />
+  </AppProviders>
 </template>

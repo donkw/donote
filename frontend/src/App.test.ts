@@ -1,7 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, onMounted } from 'vue'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import App from './App.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import {
@@ -23,11 +22,10 @@ import {
 
 let emitInitialMarkdown: ((value: string) => string) | null = null
 let emitInitialCleanMarkdown: ((value: string) => string) | null = null
-const elementPlusMocks = vi.hoisted(() => ({
+const appFeedbackMocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   prompt: vi.fn(),
   error: vi.fn(),
-  success: vi.fn(),
 }))
 const runtimeMocks = vi.hoisted(() => {
   const events = new Map<string, (...args: unknown[]) => void>()
@@ -61,22 +59,9 @@ vi.mock('../wailsjs/runtime/runtime', () => ({
   EventsOn: runtimeMocks.EventsOn,
 }))
 
-vi.mock('element-plus', async () => {
-  const actual = await vi.importActual<typeof import('element-plus')>('element-plus')
-  return {
-    ...actual,
-    ElMessageBox: {
-      ...actual.ElMessageBox,
-      confirm: elementPlusMocks.confirm,
-      prompt: elementPlusMocks.prompt,
-    },
-    ElMessage: {
-      ...actual.ElMessage,
-      error: elementPlusMocks.error,
-      success: elementPlusMocks.success,
-    },
-  }
-})
+vi.mock('./lib/appFeedback', () => ({
+  createAppFeedback: () => appFeedbackMocks,
+}))
 
 vi.mock('./components/MilkdownEditor.vue', () => ({
   default: defineComponent({
@@ -186,8 +171,8 @@ describe('App shell', () => {
     emitInitialCleanMarkdown = null
     runtimeMocks.events.clear()
     window.localStorage.clear()
-    elementPlusMocks.confirm.mockResolvedValue('confirm')
-    elementPlusMocks.prompt.mockResolvedValue({ value: '未命名.md' })
+    appFeedbackMocks.confirm.mockResolvedValue(undefined)
+    appFeedbackMocks.prompt.mockResolvedValue('未命名.md')
     vi.mocked(LoadSettings).mockReset()
     vi.mocked(LoadSettings).mockResolvedValue({ values: {} } as any)
     vi.mocked(SaveSettings).mockReset()
@@ -433,7 +418,7 @@ describe('App shell', () => {
     await wrapper.get('[data-test="tab-close-next.md"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.confirm).not.toHaveBeenCalled()
+    expect(appFeedbackMocks.confirm).not.toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-next.md"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(true)
     expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Intro')
@@ -469,12 +454,12 @@ describe('App shell', () => {
     await wrapper.get('[data-test="tab-close-intro.md"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.confirm).not.toHaveBeenCalled()
+    expect(appFeedbackMocks.confirm).not.toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(false)
   })
 
-  test('uses Element Plus confirmation before closing a dirty tab', async () => {
-    elementPlusMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
+  test('uses app feedback confirmation before closing a dirty tab', async () => {
+    appFeedbackMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -510,17 +495,16 @@ describe('App shell', () => {
     await wrapper.get('[data-test="tab-close-intro.md"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
-      '「intro.md」有未保存更改，关闭后将丢失。',
-      '关闭未保存笔记',
-      expect.objectContaining({
-        confirmButtonText: '关闭',
-        cancelButtonText: '取消',
-      }),
-    )
+    expect(appFeedbackMocks.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: '关闭未保存笔记',
+      content: '「intro.md」有未保存更改，关闭后将丢失。',
+      positiveText: '关闭',
+      negativeText: '取消',
+      type: 'warning',
+    }))
     expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(true)
 
-    elementPlusMocks.confirm.mockResolvedValueOnce('confirm')
+    appFeedbackMocks.confirm.mockResolvedValueOnce(undefined)
     await wrapper.get('[data-test="tab-close-intro.md"]').trigger('click')
     await flushPromises()
 
@@ -736,7 +720,7 @@ describe('App shell', () => {
     await wrapper.get('[data-test="file-next.md"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.confirm).not.toHaveBeenCalled()
+    expect(appFeedbackMocks.confirm).not.toHaveBeenCalled()
     expect(SaveMarkdown).not.toHaveBeenCalled()
     expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Next')
 
@@ -818,7 +802,7 @@ describe('App shell', () => {
   })
 
   test('creates a note in the current workspace without reopening the folder picker', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'new.md' })
+    appFeedbackMocks.prompt.mockResolvedValueOnce('new.md')
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -850,15 +834,12 @@ describe('App shell', () => {
     emitMenuEvent('menu:create-note')
     await flushPromises()
 
-    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
-      '请输入笔记名称',
-      '新建笔记',
-      expect.objectContaining({
-        inputValue: '未命名.md',
-        confirmButtonText: '创建',
-        cancelButtonText: '取消',
-      }),
-    )
+    expect(appFeedbackMocks.prompt).toHaveBeenCalledWith(expect.objectContaining({
+      title: '新建笔记',
+      initialValue: '未命名.md',
+      positiveText: '创建',
+      negativeText: '取消',
+    }))
     expect(CreateMarkdown).toHaveBeenCalledWith('', 'new.md')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(SelectWorkspace).not.toHaveBeenCalled()
@@ -866,7 +847,7 @@ describe('App shell', () => {
   })
 
   test('creates a markdown file from a folder context menu and opens it', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'plan.md' })
+    appFeedbackMocks.prompt.mockResolvedValueOnce('plan.md')
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -915,15 +896,12 @@ describe('App shell', () => {
     await wrapper.get('[data-test="context-create-markdown"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
-      '请输入笔记名称',
-      '新建笔记',
-      expect.objectContaining({
-        inputValue: '未命名.md',
-        confirmButtonText: '创建',
-        cancelButtonText: '取消',
-      }),
-    )
+    expect(appFeedbackMocks.prompt).toHaveBeenCalledWith(expect.objectContaining({
+      title: '新建笔记',
+      initialValue: '未命名.md',
+      positiveText: '创建',
+      negativeText: '取消',
+    }))
     expect(CreateMarkdown).toHaveBeenCalledWith('projects', 'plan.md')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(ReadMarkdown).toHaveBeenCalledWith('projects/plan.md')
@@ -931,7 +909,7 @@ describe('App shell', () => {
   })
 
   test('creates a child folder from a folder context menu', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'archive' })
+    appFeedbackMocks.prompt.mockResolvedValueOnce('archive')
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -976,22 +954,19 @@ describe('App shell', () => {
     await wrapper.get('[data-test="context-create-folder"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
-      '请输入文件夹名称',
-      '新建子目录',
-      expect.objectContaining({
-        inputValue: '新建文件夹',
-        confirmButtonText: '创建',
-        cancelButtonText: '取消',
-      }),
-    )
+    expect(appFeedbackMocks.prompt).toHaveBeenCalledWith(expect.objectContaining({
+      title: '新建子目录',
+      initialValue: '新建文件夹',
+      positiveText: '创建',
+      negativeText: '取消',
+    }))
     expect(CreateFolder).toHaveBeenCalledWith('projects', 'archive')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(wrapper.text()).toContain('archive')
   })
 
   test('renames a tree file from the context menu and keeps the open tab path current', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'renamed.md' })
+    appFeedbackMocks.prompt.mockResolvedValueOnce('renamed.md')
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1034,15 +1009,12 @@ describe('App shell', () => {
     await wrapper.get('[data-test="context-rename"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.prompt).toHaveBeenCalledWith(
-      '请输入新的名称',
-      '重命名',
-      expect.objectContaining({
-        inputValue: 'intro.md',
-        confirmButtonText: '重命名',
-        cancelButtonText: '取消',
-      }),
-    )
+    expect(appFeedbackMocks.prompt).toHaveBeenCalledWith(expect.objectContaining({
+      title: '重命名',
+      initialValue: 'intro.md',
+      positiveText: '重命名',
+      negativeText: '取消',
+    }))
     expect(RenamePath).toHaveBeenCalledWith('intro.md', 'renamed.md')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-renamed.md"]').exists()).toBe(true)
@@ -1052,7 +1024,7 @@ describe('App shell', () => {
   })
 
   test('renames a tree folder from the context menu', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: 'archive' })
+    appFeedbackMocks.prompt.mockResolvedValueOnce('archive')
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1128,15 +1100,13 @@ describe('App shell', () => {
     await wrapper.get('[data-test="context-delete"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
-      '删除「intro.md」？此操作无法撤销。',
-      '删除项目',
-      expect.objectContaining({
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }),
-    )
+    expect(appFeedbackMocks.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: '删除项目',
+      content: '删除「intro.md」？此操作无法撤销。',
+      positiveText: '删除',
+      negativeText: '取消',
+      type: 'warning',
+    }))
     expect(DeletePath).toHaveBeenCalledWith('intro.md')
     expect(ListWorkspace).toHaveBeenCalled()
     expect(wrapper.find('[data-test="tab-intro.md"]').exists()).toBe(false)
@@ -1145,8 +1115,8 @@ describe('App shell', () => {
     })
   })
 
-  test('does not create a note when the Element Plus prompt is cancelled or empty', async () => {
-    elementPlusMocks.prompt.mockRejectedValueOnce(new Error('cancelled'))
+  test('does not create a note when the app feedback prompt is cancelled or empty', async () => {
+    appFeedbackMocks.prompt.mockResolvedValueOnce(null)
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1162,15 +1132,15 @@ describe('App shell', () => {
 
     expect(CreateMarkdown).not.toHaveBeenCalled()
 
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: '' })
+    appFeedbackMocks.prompt.mockResolvedValueOnce('')
     emitMenuEvent('menu:create-note')
     await flushPromises()
 
     expect(CreateMarkdown).not.toHaveBeenCalled()
   })
 
-  test('does not create a note when the Element Plus prompt is whitespace only', async () => {
-    elementPlusMocks.prompt.mockResolvedValueOnce({ value: '   ' })
+  test('does not create a note when the app feedback prompt is whitespace only', async () => {
+    appFeedbackMocks.prompt.mockResolvedValueOnce('   ')
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1187,7 +1157,7 @@ describe('App shell', () => {
     expect(CreateMarkdown).not.toHaveBeenCalled()
   })
 
-  test('stores API errors and shows Element Plus error feedback', async () => {
+  test('stores API errors and shows app feedback error feedback', async () => {
     vi.mocked(SelectWorkspace).mockResolvedValue({
       rootPath: 'D:/notes',
       name: 'notes',
@@ -1209,7 +1179,7 @@ describe('App shell', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('无法读取笔记')
-    expect(ElMessage.error).toHaveBeenCalledWith('无法读取笔记')
+    expect(appFeedbackMocks.error).toHaveBeenCalledWith('无法读取笔记')
   })
 
   test('prompts the user to configure attachment directories before pasted files are saved', async () => {
@@ -1241,15 +1211,13 @@ describe('App shell', () => {
     ])
     await flushPromises()
 
-    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
-      '粘贴图片或文件前，请先在设置中配置图片存储目录。',
-      '未配置附件目录',
-      expect.objectContaining({
-        confirmButtonText: '去设置',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }),
-    )
+    expect(appFeedbackMocks.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: '未配置附件目录',
+      content: '粘贴图片或文件前，请先在设置中配置图片存储目录。',
+      positiveText: '去设置',
+      negativeText: '取消',
+      type: 'warning',
+    }))
     expect(SaveAttachment).not.toHaveBeenCalled()
     expect(wrapper.find('[data-test="attachment-image-dir"]').exists()).toBe(true)
   })
@@ -1546,23 +1514,21 @@ describe('App shell', () => {
     await wrapper.get('[data-test="utility-settings"]').trigger('click')
     await flushPromises()
 
-    elementPlusMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
+    appFeedbackMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
     await wrapper.get('[data-test="select-workspace-root"]').trigger('click')
     await flushPromises()
 
-    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
-      '当前工作区有未保存更改，切换后将丢失。',
-      '切换工作目录',
-      expect.objectContaining({
-        confirmButtonText: '切换',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }),
-    )
+    expect(appFeedbackMocks.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: '切换工作目录',
+      content: '当前工作区有未保存更改，切换后将丢失。',
+      positiveText: '切换',
+      negativeText: '取消',
+      type: 'warning',
+    }))
     expect(SelectWorkspace).not.toHaveBeenCalled()
     expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('# Draft')
 
-    elementPlusMocks.confirm.mockResolvedValueOnce('confirm')
+    appFeedbackMocks.confirm.mockResolvedValueOnce(undefined)
     await wrapper.get('[data-test="select-workspace-root"]').trigger('click')
     await flushPromises()
 
