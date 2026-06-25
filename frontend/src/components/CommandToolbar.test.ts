@@ -29,7 +29,7 @@ describe('CommandToolbar', () => {
     expect(wrapper.find('.command-center-button').exists()).toBe(false)
     expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('n-button')
     expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('command-button')
-    expect(wrapper.get('[data-test="save-now"]').classes()).not.toContain('el-button--primary')
+    expect(wrapper.get('[data-test="save-now"]').attributes('aria-pressed')).toBeUndefined()
     const actionOrder = wrapper
       .find('.command-actions')
       .findAll('[data-test]')
@@ -47,7 +47,7 @@ describe('CommandToolbar', () => {
     expect(wrapper.emitted('toggle-theme')).toHaveLength(1)
   })
 
-  test('keeps icon controls accessible and disables save while saving', () => {
+  test('keeps icon controls accessible and disables save while saving', async () => {
     const wrapper = mount(CommandToolbar, {
       props: {
         activePanel: 'outline',
@@ -69,5 +69,9 @@ describe('CommandToolbar', () => {
     expect(wrapper.get('[data-test="utility-outline"]').classes()).toContain(
       'command-button--active',
     )
+
+    await wrapper.get('[data-test="save-now"]').trigger('click')
+
+    expect(wrapper.emitted('save')).toBeUndefined()
   })
 })

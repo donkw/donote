@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { NButtonGroup } from 'naive-ui'
 import { describe, expect, test } from 'vitest'
 import FormatToolbar from './FormatToolbar.vue'
 
@@ -9,6 +10,7 @@ describe('FormatToolbar', () => {
     expect(wrapper.get('[data-test="format-toolbar"]').classes()).toContain(
       'format-toolbar--vertical',
     )
+    expect(wrapper.getComponent(NButtonGroup).props('vertical')).toBe(true)
     expect(wrapper.find('[data-test="format-table"]').exists()).toBe(true)
     expect(wrapper.get('[data-test="format-heading"]').classes()).toContain('n-button')
     expect(wrapper.get('[data-test="format-heading"]').attributes('aria-label')).toBe(

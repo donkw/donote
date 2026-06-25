@@ -34,7 +34,11 @@ const formatActions = [
 </script>
 
 <template>
-  <NButtonGroup data-test="format-toolbar" class="toolbar-group control-cluster format-toolbar format-toolbar--vertical">
+  <NButtonGroup
+    data-test="format-toolbar"
+    class="toolbar-group control-cluster format-toolbar format-toolbar--vertical"
+    vertical
+  >
     <NTooltip
       v-for="action in formatActions"
       :key="action.key"
