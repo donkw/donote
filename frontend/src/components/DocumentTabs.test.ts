@@ -56,6 +56,30 @@ describe('DocumentTabs', () => {
     expect(wrapper.emitted('update:activePath')?.[0]).toEqual(['draft.md'])
   })
 
+  test('emits switch events for standard tablist keyboard navigation', async () => {
+    const cases = [
+      { key: 'ArrowRight', activePath: 'intro.md', targetPath: 'draft.md' },
+      { key: 'ArrowDown', activePath: 'intro.md', targetPath: 'draft.md' },
+      { key: 'ArrowLeft', activePath: 'intro.md', targetPath: 'draft.md' },
+      { key: 'ArrowUp', activePath: 'intro.md', targetPath: 'draft.md' },
+      { key: 'Home', activePath: 'draft.md', targetPath: 'intro.md' },
+      { key: 'End', activePath: 'intro.md', targetPath: 'draft.md' },
+    ]
+
+    for (const { key, activePath, targetPath } of cases) {
+      const wrapper = mount(DocumentTabs, {
+        props: {
+          documents,
+          activePath,
+        },
+      })
+
+      await wrapper.get(`[data-test="tab-${activePath}"]`).trigger('keydown', { key })
+
+      expect(wrapper.emitted('update:activePath')?.[0], key).toEqual([targetPath])
+    }
+  })
+
   test('clicking close emits close for that document without switching tabs', async () => {
     const wrapper = mount(DocumentTabs, {
       props: {
