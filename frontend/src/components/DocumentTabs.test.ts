@@ -43,6 +43,20 @@ describe('DocumentTabs', () => {
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
   })
 
+  test('uses Donote tab hooks instead of Element Plus tab hooks', () => {
+    const wrapper = mount(DocumentTabs, {
+      props: {
+        documents,
+        activePath: 'draft.md',
+      },
+    })
+
+    expect(wrapper.html()).not.toContain('el-tabs')
+    expect(wrapper.html()).not.toContain('el-tabs__')
+    expect(wrapper.find('.document-tab.active').exists()).toBe(true)
+    expect(wrapper.find('.document-tab.is-active').exists()).toBe(false)
+  })
+
   test('emits switch events when tab trigger is clicked', async () => {
     const wrapper = mount(DocumentTabs, {
       props: {
