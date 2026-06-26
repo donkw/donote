@@ -51,3 +51,9 @@ wails build
 ```
 
 The built executable is written to `build/bin/donote.exe`.
+
+## Release
+
+When publishing a new version, create the GitHub Release from the new version
+tag and upload `build/bin/donote.exe` as a release asset. Every new release must
+include the built Windows executable.

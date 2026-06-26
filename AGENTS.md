@@ -50,6 +50,12 @@ or `Fix editor save status`. Pull requests should include a concise summary,
 test results, linked issues when applicable, and screenshots or recordings for
 visible UI changes.
 
+## Release Guidelines
+
+When publishing a new version, run `wails build` and upload
+`build/bin/donote.exe` to the GitHub Release assets. Every release must include
+the built Windows executable.
+
 ## Security & Configuration Tips
 
 Keep all file access constrained to the selected workspace. Avoid accepting
