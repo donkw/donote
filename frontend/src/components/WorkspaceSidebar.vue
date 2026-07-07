@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Search } from '@lucide/vue'
-import { NEmpty, NInput } from 'naive-ui'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { FilePlus2, FolderPlus, NotebookTabs, Search } from '@lucide/vue'
+import { NButton, NEmpty, NInput, NTooltip } from 'naive-ui'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { main } from '../../wailsjs/go/models'
 import WorkspaceTreeNode from './WorkspaceTreeNode.vue'
 
@@ -33,6 +33,7 @@ const emit = defineEmits<{
 const fileTreeQuery = ref('')
 const workspaceRootCollapsed = ref(false)
 const contextMenu = ref<ContextMenuState | null>(null)
+const contextMenuElement = ref<HTMLElement | null>(null)
 const isFiltering = computed(() => fileTreeQuery.value.trim().length > 0)
 
 const workspaceTree = computed<main.FileNode[]>(() => {
@@ -180,6 +181,9 @@ function openContextMenu(event: MouseEvent, node: main.FileNode) {
     x: Math.max(8, event.clientX),
     y: Math.max(8, event.clientY),
   }
+  void nextTick(() => {
+    contextMenuElement.value?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+  })
 }
 
 function closeContextMenu() {
@@ -190,6 +194,16 @@ function closeContextMenuFromKeyboard(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     closeContextMenu()
   }
+}
+
+function createRootMarkdown() {
+  closeContextMenu()
+  emit('create-markdown', '')
+}
+
+function createRootFolder() {
+  closeContextMenu()
+  emit('create-folder', '')
 }
 
 function runContextAction(action: ContextActionKey) {
@@ -220,6 +234,50 @@ function runContextAction(action: ContextActionKey) {
 <template>
   <aside class="sidebar workspace-sidebar">
     <div class="sidebar-header">
+      <div v-if="workspaceName || tree.length" class="workspace-title">
+        <span class="workspace-title__mark" aria-hidden="true">
+          <NotebookTabs :size="16" :stroke-width="2" />
+        </span>
+        <span class="workspace-title__copy">
+          <strong>{{ workspaceName || '未命名工作区' }}</strong>
+          <span>Markdown workspace</span>
+        </span>
+        <span class="workspace-actions">
+          <NTooltip placement="bottom">
+            <template #trigger>
+              <NButton
+                class="workspace-action"
+                data-test="new-note"
+                size="small"
+                quaternary
+                aria-label="新建笔记"
+                title="新建笔记"
+                @click="createRootMarkdown"
+              >
+                <FilePlus2 :size="15" />
+              </NButton>
+            </template>
+            新建笔记
+          </NTooltip>
+          <NTooltip placement="bottom">
+            <template #trigger>
+              <NButton
+                class="workspace-action"
+                data-test="new-folder"
+                size="small"
+                quaternary
+                aria-label="新建文件夹"
+                title="新建文件夹"
+                @click="createRootFolder"
+              >
+                <FolderPlus :size="15" />
+              </NButton>
+            </template>
+            新建文件夹
+          </NTooltip>
+        </span>
+      </div>
+
       <div v-if="workspaceName || tree.length" data-test="file-tree-search" class="file-tree-search">
         <NInput
           v-model:value="fileTreeQuery"
@@ -254,6 +312,7 @@ function runContextAction(action: ContextActionKey) {
 
     <div
       v-if="contextMenu"
+      ref="contextMenuElement"
       data-test="file-tree-context-menu"
       class="file-tree-context-menu"
       role="menu"

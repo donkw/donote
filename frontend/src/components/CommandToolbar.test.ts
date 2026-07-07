@@ -8,24 +8,28 @@ describe('CommandToolbar', () => {
       props: {
         activePanel: 'outline',
         drawerOpen: false,
+        sidebarOpen: true,
         searchOpen: false,
         theme: 'dark',
         saveState: 'dirty',
+        workspaceName: 'notes',
+        activeDocumentName: 'intro.md',
+        openDocumentCount: 2,
       },
     })
 
-    expect(wrapper.find('.command-brand__name').exists()).toBe(false)
-    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('DoNote')
-    expect(wrapper.find('.command-brand__meta').exists()).toBe(false)
-    expect(wrapper.find('[data-test="command-workspace-name"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="command-active-document"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="command-workspace-root"]').exists()).toBe(false)
-    expect(wrapper.find('.command-actions__ghost').exists()).toBe(false)
-    expect(wrapper.find('.command-status').exists()).toBe(false)
-    expect(wrapper.find('[data-test="command-open-count"]').exists()).toBe(false)
-    expect(wrapper.find('.command-count').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('未保存')
+    expect(wrapper.get('.command-brand__name').text()).toBe('Donote')
+    expect(wrapper.get('[data-test="brand-mark"]').text()).toBe('D')
+    expect(wrapper.get('[data-test="command-workspace-name"]').text()).toBe('notes')
+    expect(wrapper.get('[data-test="command-active-document"]').text()).toBe('intro.md')
+    expect(wrapper.get('[data-test="command-open-count"]').text()).toBe('2')
+    expect(wrapper.get('[data-test="command-open-count"]').attributes('aria-label')).toBe(
+      '打开文档数 2',
+    )
+    expect(wrapper.get('.command-status').text()).toBe('未保存')
+    expect(wrapper.get('.command-status').attributes('role')).toBe('status')
+    expect(wrapper.get('.command-status').attributes('aria-live')).toBe('polite')
+    expect(wrapper.get('[data-test="brand-mark"]').attributes('aria-hidden')).toBe('true')
     expect(wrapper.find('.command-center-button').exists()).toBe(false)
     expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('n-button')
     expect(wrapper.get('[data-test="utility-search"]').classes()).toContain('command-button')
@@ -36,11 +40,13 @@ describe('CommandToolbar', () => {
       .map((item) => item.attributes('data-test'))
     expect(actionOrder.indexOf('utility-search')).toBe(actionOrder.indexOf('save-now') - 1)
 
+    await wrapper.get('[data-test="toggle-sidebar"]').trigger('click')
     await wrapper.get('[data-test="utility-search"]').trigger('click')
     await wrapper.get('[data-test="save-now"]').trigger('click')
     await wrapper.get('[data-test="utility-settings"]').trigger('click')
     await wrapper.get('[data-test="theme-toggle"]').trigger('click')
 
+    expect(wrapper.emitted('toggle-sidebar')).toHaveLength(1)
     expect(wrapper.emitted('search')).toHaveLength(1)
     expect(wrapper.emitted('save')).toHaveLength(1)
     expect(wrapper.emitted('select')?.[0]).toEqual(['settings'])
@@ -52,12 +58,17 @@ describe('CommandToolbar', () => {
       props: {
         activePanel: 'outline',
         drawerOpen: true,
+        sidebarOpen: false,
         searchOpen: true,
         theme: 'light',
         saveState: 'saving',
+        workspaceName: '',
+        activeDocumentName: '',
+        openDocumentCount: 0,
       },
     })
 
+    expect(wrapper.get('[data-test="toggle-sidebar"]').attributes('aria-label')).toBe('显示目录栏')
     expect(wrapper.get('[data-test="utility-search"]').attributes('aria-label')).toBe('搜索')
     expect(wrapper.get('[data-test="utility-search"]').text()).toBe('')
     expect(wrapper.get('[data-test="utility-outline"]').attributes('aria-label')).toBe('大纲')

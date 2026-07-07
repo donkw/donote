@@ -191,6 +191,7 @@ describe('App shell', () => {
 
     expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
+    expect(wrapper.find('[data-test="empty-open-workspace"]').exists()).toBe(true)
   })
 
   test('destroys app feedback when the shell unmounts', () => {
@@ -230,8 +231,8 @@ describe('App shell', () => {
 
     expect(wrapper.find('[data-test="topbar"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="command-toolbar"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="brand-mark"]').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('DoNote')
+    expect(wrapper.get('[data-test="brand-mark"]').text()).toBe('D')
+    expect(wrapper.text()).toContain('Donote')
     expect(wrapper.find('.utility-rail').exists()).toBe(false)
     expect(wrapper.find('[data-test="format-toolbar"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="theme-toggle"]').exists()).toBe(true)
@@ -681,18 +682,18 @@ describe('App shell', () => {
     await wrapper.get('.mock-editor').setValue('# Changed')
     await flushPromises()
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
-    expect(wrapper.find('.command-status').exists()).toBe(false)
+    expect(wrapper.get('.command-status').text()).toBe('未保存')
 
     wrapper.getComponent({ name: 'MilkdownEditor' }).vm.$emit('sync-clean-content', '# Changed')
     await flushPromises()
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
-    expect(wrapper.find('.command-status').exists()).toBe(false)
+    expect(wrapper.get('.command-status').text()).toBe('未保存')
 
     await wrapper.get('.mock-editor').setValue('# Intro normalized')
     await flushPromises()
 
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
-    expect(wrapper.find('.command-status').exists()).toBe(false)
+    expect(wrapper.get('.command-status').text()).toBe('已保存')
   })
 
   test('does not implicitly save dirty content when opening another tab', async () => {
@@ -788,14 +789,40 @@ describe('App shell', () => {
 
     wrapper.unmount()
     mockSettingsValues(latestSavedSettingsValues())
+    vi.mocked(OpenWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'projects',
+          path: 'projects',
+          type: 'folder',
+          children: [
+            {
+              name: 'archive',
+              path: 'projects/archive',
+              type: 'folder',
+              children: [
+                {
+                  name: 'plan.md',
+                  path: 'projects/archive/plan.md',
+                  type: 'file',
+                },
+              ],
+            },
+          ],
+        } as any,
+      ],
+    } as any)
     const reopened = mount(App)
-    emitMenuEvent('menu:open-workspace')
     await flushPromises()
 
     expect(reopened.find('[data-test="file-projects/archive/plan.md"]').exists()).toBe(false)
-    expect(reopened.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([
-      'projects',
-    ])
+    await waitForAssertion(() => {
+      expect(reopened.getComponent(WorkspaceSidebar).props('expandedFolderPaths')).toEqual([
+        'projects',
+      ])
+    })
 
     await reopened.get('[data-test="folder-projects/archive"]').trigger('click')
     await flushPromises()
@@ -1546,6 +1573,58 @@ describe('App shell', () => {
     await waitForAssertion(() => {
       expect(latestSavedSettingsValues()['donote.lastWorkspaceRoot']).toBe('E:/writing')
     })
+  })
+
+  test('confirms before switching workspace from the app menu when documents are dirty', async () => {
+    mockSettingsValues({ 'donote.lastWorkspaceRoot': 'D:/notes' })
+    vi.mocked(OpenWorkspace).mockResolvedValue({
+      rootPath: 'D:/notes',
+      name: 'notes',
+      tree: [
+        {
+          name: 'intro.md',
+          path: 'intro.md',
+          type: 'file',
+        } as any,
+      ],
+    } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({
+      path: 'intro.md',
+      name: 'intro.md',
+      content: '# Intro',
+    })
+    vi.mocked(SelectWorkspace).mockResolvedValueOnce({
+      rootPath: 'E:/writing',
+      name: 'writing',
+      tree: [],
+    } as any)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.mock-editor').setValue('# Draft')
+    await flushPromises()
+
+    appFeedbackMocks.confirm.mockRejectedValueOnce(new Error('cancelled'))
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+
+    expect(appFeedbackMocks.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: '切换工作目录',
+      content: '当前工作区有未保存更改，切换后将丢失。',
+      positiveText: '切换',
+      negativeText: '取消',
+      type: 'warning',
+    }))
+    expect(SelectWorkspace).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('notes')
+
+    appFeedbackMocks.confirm.mockResolvedValueOnce(undefined)
+    emitMenuEvent('menu:open-workspace')
+    await flushPromises()
+
+    expect(SelectWorkspace).toHaveBeenCalledTimes(1)
   })
 
   test('selects attachment directories through the native directory dialog', async () => {

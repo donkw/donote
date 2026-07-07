@@ -187,7 +187,7 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   menuEventCleanups.push(
     EventsOn('menu:open-workspace', () => {
-      void openWorkspace()
+      void openWorkspaceWithDirtyCheck()
     }),
     EventsOn('menu:create-note', () => {
       void createNote()
@@ -265,6 +265,13 @@ function openWorkspace(): Promise<main.WorkspaceInfo | null> {
     })
   }
   return workspaceSelectionPromise
+}
+
+async function openWorkspaceWithDirtyCheck(): Promise<main.WorkspaceInfo | null> {
+  if (!(await confirmWorkspaceSwitchIfDirty())) {
+    return null
+  }
+  return openWorkspace()
 }
 
 async function runOpenWorkspace(): Promise<main.WorkspaceInfo | null> {
@@ -594,6 +601,10 @@ function toggleEditorSearch() {
     return
   }
   void openEditorSearch()
+}
+
+function toggleSidebar() {
+  showSidebar.value = !showSidebar.value
 }
 
 function switchTheme() {
@@ -998,12 +1009,17 @@ function dismissErrorBanner() {
     <CommandToolbar
       :active-panel="activeUtilityPanel"
       :drawer-open="showUtilityDrawer"
+      :sidebar-open="showSidebar"
       :theme="theme"
       :save-state="activeSaveState"
       :search-open="showEditorSearch"
+      :workspace-name="workspace?.name ?? ''"
+      :active-document-name="activeDocument?.name ?? ''"
+      :open-document-count="openDocuments.length"
       @select="toggleUtilityPanel"
       @search="toggleEditorSearch"
       @save="flushSave"
+      @toggle-sidebar="toggleSidebar"
       @toggle-theme="switchTheme"
     />
 
@@ -1065,6 +1081,7 @@ function dismissErrorBanner() {
           @sync-clean-content="syncActiveCleanContent"
           @paste-files="handlePasteFiles"
           @insert-markdown="insertMarkdown"
+          @open-workspace="openWorkspaceWithDirtyCheck"
         />
       </main>
 

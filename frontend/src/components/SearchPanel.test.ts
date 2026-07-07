@@ -63,4 +63,20 @@ describe('SearchPanel', () => {
     expect(wrapper.get('[data-test="search-next"]').classes()).toContain('n-button')
     expect(wrapper.get('[data-test="search-close"]').classes()).toContain('n-button')
   })
+
+  test('labels the search field and announces result count', () => {
+    const wrapper = mount(SearchPanel, {
+      props: {
+        query: 'Intro',
+        result: searchResult,
+        activeIndex: 0,
+      },
+    })
+
+    expect(wrapper.get('[data-test="search-input"]').attributes('aria-label')).toBe(
+      '在当前笔记中搜索',
+    )
+    expect(wrapper.get('.search-count').attributes('role')).toBe('status')
+    expect(wrapper.get('.search-count').attributes('aria-live')).toBe('polite')
+  })
 })

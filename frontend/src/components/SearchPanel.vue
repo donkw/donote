@@ -30,7 +30,7 @@ defineExpose({ focus })
   <div ref="searchPanel" class="search-panel">
     <NInput
       :value="query"
-      :input-props="{ 'data-test': 'search-input' }"
+      :input-props="{ 'data-test': 'search-input', 'aria-label': '在当前笔记中搜索' }"
       style="width: min(420px, 100%); min-width: 220px"
       placeholder="在当前笔记中搜索"
       clearable
@@ -41,7 +41,7 @@ defineExpose({ focus })
       </template>
     </NInput>
     <div class="search-actions">
-      <span class="search-count">
+      <span class="search-count" role="status" aria-live="polite">
         {{ result.matches.length ? `${activeIndex + 1}/${result.matches.length}` : '0/0' }}
       </span>
       <NButton

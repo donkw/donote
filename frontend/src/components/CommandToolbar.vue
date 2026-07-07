@@ -2,29 +2,45 @@
 import {
   ListTree,
   Moon,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Save,
   Search,
   Settings,
   Sun,
 } from '@lucide/vue'
 import { NButton, NTooltip } from 'naive-ui'
+import { computed } from 'vue'
 import type { ThemeMode } from '../lib/theme'
 import type { SaveState, UtilityPanel } from '../types/app'
 
 const props = defineProps<{
   activePanel: UtilityPanel
   drawerOpen: boolean
+  sidebarOpen: boolean
   searchOpen: boolean
   theme: ThemeMode
   saveState: SaveState
+  workspaceName: string
+  activeDocumentName: string
+  openDocumentCount: number
 }>()
 
 const emit = defineEmits<{
   (event: 'select', panel: UtilityPanel): void
   (event: 'search'): void
   (event: 'save'): void
+  (event: 'toggle-sidebar'): void
   (event: 'toggle-theme'): void
 }>()
+
+const saveStateText = computed(() => {
+  if (props.saveState === 'saving') return '保存中'
+  if (props.saveState === 'dirty') return '未保存'
+  if (props.saveState === 'error') return '保存失败'
+  return '已保存'
+})
 
 function panelType(panel: UtilityPanel) {
   return panelActive(panel) ? 'primary' : 'default'
@@ -37,7 +53,55 @@ function panelActive(panel: UtilityPanel) {
 
 <template>
   <header data-test="command-toolbar" class="command-toolbar">
-    <div class="command-toolbar__spacer" aria-hidden="true" />
+    <div class="command-brand">
+      <NTooltip placement="bottom">
+        <template #trigger>
+          <NButton
+            class="command-button command-button--ghost"
+            size="small"
+            quaternary
+            data-test="toggle-sidebar"
+            :aria-label="sidebarOpen ? '隐藏目录栏' : '显示目录栏'"
+            :title="sidebarOpen ? '隐藏目录栏' : '显示目录栏'"
+            @click="emit('toggle-sidebar')"
+          >
+            <PanelLeftClose v-if="sidebarOpen" :size="15" />
+            <PanelLeftOpen v-else :size="15" />
+          </NButton>
+        </template>
+        {{ sidebarOpen ? '隐藏目录栏' : '显示目录栏' }}
+      </NTooltip>
+
+      <span data-test="brand-mark" class="brand-mark" aria-hidden="true">D</span>
+      <span class="command-brand__copy">
+        <strong class="command-brand__name">Donote</strong>
+        <span data-test="command-workspace-name" class="command-brand__meta">
+          {{ workspaceName || '本地 Markdown 笔记' }}
+        </span>
+      </span>
+    </div>
+
+    <div class="command-context">
+      <NotebookPen :size="15" aria-hidden="true" />
+      <span data-test="command-active-document" class="command-context__title">
+        {{ activeDocumentName || '选择笔记开始写作' }}
+      </span>
+      <span
+        data-test="command-open-count"
+        class="command-count"
+        :aria-label="`打开文档数 ${openDocumentCount}`"
+      >
+        {{ openDocumentCount }}
+      </span>
+      <span
+        class="command-status"
+        :class="`command-status--${saveState}`"
+        role="status"
+        aria-live="polite"
+      >
+        {{ saveStateText }}
+      </span>
+    </div>
 
     <div class="command-actions">
       <NTooltip placement="bottom">

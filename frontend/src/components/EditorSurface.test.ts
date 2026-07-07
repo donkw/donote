@@ -89,7 +89,7 @@ describe('EditorSurface', () => {
     expect(wrapper.emitted('insert-markdown')?.[0]).toEqual(['**加粗文本**'])
   })
 
-  test('renders an empty state without workspace management buttons', () => {
+  test('renders an empty state with a workspace action', async () => {
     const wrapper = mount(EditorSurface, {
       props: {
         document: null,
@@ -98,8 +98,9 @@ describe('EditorSurface', () => {
     })
 
     expect(wrapper.text()).toContain('选择一个笔记文件夹开始写作')
-    expect(wrapper.find('button').exists()).toBe(false)
+    expect(wrapper.get('[data-test="empty-open-workspace"]').text()).toBe('打开笔记文件夹')
     expect(wrapper.find('.n-empty').exists()).toBe(true)
-    expect(wrapper.emitted('open-workspace')).toBeUndefined()
+    await wrapper.get('[data-test="empty-open-workspace"]').trigger('click')
+    expect(wrapper.emitted('open-workspace')).toHaveLength(1)
   })
 })

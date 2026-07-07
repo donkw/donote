@@ -31,10 +31,10 @@ describe('WorkspaceSidebar', () => {
     })
 
     expect(wrapper.text()).toContain('notes')
-    expect(wrapper.find('.workspace-title').exists()).toBe(false)
+    expect(wrapper.find('.workspace-title').exists()).toBe(true)
     expect(wrapper.find('[data-test="open-workspace"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="new-note"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="new-folder"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="new-note"]').attributes('aria-label')).toBe('新建笔记')
+    expect(wrapper.get('[data-test="new-folder"]').attributes('aria-label')).toBe('新建文件夹')
     expect(wrapper.get('[data-test="file-tree-search"] input').attributes('placeholder')).toBe(
       '搜索文件',
     )
@@ -84,6 +84,23 @@ describe('WorkspaceSidebar', () => {
     expect(fileRow.find('.file-tree-node__label').text()).toBe('plan.md')
   })
 
+  test('exposes root-level create actions in the sidebar header', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: [],
+      },
+    })
+
+    await wrapper.get('[data-test="new-note"]').trigger('click')
+    await wrapper.get('[data-test="new-folder"]').trigger('click')
+
+    expect(wrapper.emitted('create-markdown')).toEqual([['']])
+    expect(wrapper.emitted('create-folder')).toEqual([['']])
+  })
+
   test('emits select-file with the file path', async () => {
     const wrapper = mount(WorkspaceSidebar, {
       props: {
@@ -128,6 +145,26 @@ describe('WorkspaceSidebar', () => {
     await wrapper.get('[data-test="context-delete"]').trigger('click')
 
     expect(wrapper.emitted('delete-node')).toEqual([['projects/archive/plan.md']])
+  })
+
+  test('opens the context menu from the keyboard', async () => {
+    const wrapper = mount(WorkspaceSidebar, {
+      props: {
+        workspaceName: 'notes',
+        tree,
+        activeFilePath: '',
+        expandedFolderPaths: ['projects', 'projects/archive'],
+      },
+    })
+
+    await wrapper.get('[data-test="file-projects/archive/plan.md"]').trigger('keydown', {
+      key: 'F10',
+      shiftKey: true,
+    })
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-test="file-tree-context-menu"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="file-tree-context-menu"]').text()).toContain('重命名')
   })
 
   test('opens folder context menu and emits creation and rename actions', async () => {

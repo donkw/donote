@@ -64,6 +64,24 @@ function handleClick() {
 function handleContextMenu(event: MouseEvent) {
   emit('open-context-menu', event, props.node)
 }
+
+function openContextMenuFromKeyboard(event: KeyboardEvent) {
+  if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) {
+    return
+  }
+  event.preventDefault()
+  event.stopPropagation()
+  const row = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
+  const rect = row?.getBoundingClientRect()
+  emit(
+    'open-context-menu',
+    new MouseEvent('contextmenu', {
+      clientX: rect ? rect.left + 24 : 8,
+      clientY: rect ? rect.top + Math.min(rect.height, 32) : 8,
+    }),
+    props.node,
+  )
+}
 </script>
 
 <template>
@@ -83,6 +101,7 @@ function handleContextMenu(event: MouseEvent) {
     type="button"
     @click.stop="handleClick"
     @contextmenu.prevent.stop="handleContextMenu"
+    @keydown="openContextMenuFromKeyboard"
   >
     <span
       class="file-tree-node__chevron"

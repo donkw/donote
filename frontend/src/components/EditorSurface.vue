@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NEmpty } from 'naive-ui'
+import { FolderOpen } from '@lucide/vue'
+import { NButton, NEmpty } from 'naive-ui'
 import type { OpenDocument } from '../types/app'
 import MilkdownEditor from './MilkdownEditor.vue'
 
@@ -24,6 +25,7 @@ defineEmits<{
   (event: 'sync-clean-content', value: string): void
   (event: 'paste-files', files: File[]): void
   (event: 'insert-markdown', markdown: string): void
+  (event: 'open-workspace'): void
 }>()
 </script>
 
@@ -47,7 +49,16 @@ defineEmits<{
       v-else
       class="empty-state"
       description="选择一个笔记文件夹开始写作"
-      :show-icon="false"
-    />
+      :image-size="56"
+    >
+      <template #icon>
+        <FolderOpen :size="38" :stroke-width="1.8" />
+      </template>
+      <template #extra>
+        <NButton data-test="empty-open-workspace" type="primary" @click="$emit('open-workspace')">
+          打开笔记文件夹
+        </NButton>
+      </template>
+    </NEmpty>
   </section>
 </template>
