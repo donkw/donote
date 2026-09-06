@@ -89,6 +89,13 @@ describe('EditorSurface', () => {
     expect(wrapper.emitted('insert-markdown')?.[0]).toEqual(['**加粗文本**'])
   })
 
+  test('offers a new note instead of reopening an already selected workspace', async () => {
+    const wrapper = mount(EditorSurface, { props: { document: null, modelValue: '', workspaceOpen: true } })
+    expect(wrapper.find('[data-test="empty-open-workspace"]').exists()).toBe(false)
+    await wrapper.get('[data-test="empty-create-note"]').trigger('click')
+    expect(wrapper.emitted('create-note')).toHaveLength(1)
+  })
+
   test('renders an empty state with a workspace action', async () => {
     const wrapper = mount(EditorSurface, {
       props: {

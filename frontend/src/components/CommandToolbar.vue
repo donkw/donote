@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ListTree,
+  SquarePen,
   Moon,
   NotebookPen,
   PanelLeftClose,
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   (event: 'select', panel: UtilityPanel): void
   (event: 'search'): void
   (event: 'save'): void
+  (event: 'create-note'): void
   (event: 'toggle-sidebar'): void
   (event: 'toggle-theme'): void
 }>()
@@ -94,6 +96,7 @@ function panelActive(panel: UtilityPanel) {
         {{ openDocumentCount }}
       </span>
       <span
+        v-if="activeDocumentName"
         class="command-status"
         :class="`command-status--${saveState}`"
         role="status"
@@ -106,6 +109,14 @@ function panelActive(panel: UtilityPanel) {
     <div class="command-actions">
       <NTooltip placement="bottom">
         <template #trigger>
+          <NButton class="command-button" quaternary data-test="create-note" aria-label="新建笔记" title="新建笔记" @click="emit('create-note')">
+            <SquarePen :size="16" />
+          </NButton>
+        </template>
+        新建笔记
+      </NTooltip>
+      <NTooltip placement="bottom">
+        <template #trigger>
           <NButton
             class="command-button"
             :class="{ 'command-button--active': searchOpen }"
@@ -113,7 +124,7 @@ function panelActive(panel: UtilityPanel) {
             quaternary
             data-test="utility-search"
             aria-label="搜索"
-            title="搜索"
+            title="搜索笔记内容 (Ctrl+F)"
             :type="searchOpen ? 'primary' : 'default'"
             :aria-pressed="searchOpen"
             @click="emit('search')"
@@ -132,9 +143,9 @@ function panelActive(panel: UtilityPanel) {
             quaternary
             data-test="save-now"
             aria-label="立即保存"
-            title="立即保存"
+            title="立即保存 (Ctrl+S)"
             :loading="saveState === 'saving'"
-            :disabled="saveState === 'saving'"
+            :disabled="!activeDocumentName || saveState === 'saving'"
             @click="emit('save')"
           >
             <Save :size="15" />

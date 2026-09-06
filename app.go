@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx       context.Context
-	workspace *WorkspaceService
+	ctx           context.Context
+	workspace     *WorkspaceService
+	frontendReady atomic.Bool
+	closeApproved atomic.Bool
 }
 
 // NewApp creates a new App application struct
@@ -21,9 +24,18 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	runtime.EventsOn(ctx, "app:ready", func(...interface{}) { a.frontendReady.Store(true) })
+	runtime.EventsOn(ctx, "app:close-confirmed", func(...interface{}) {
+		a.closeApproved.Store(true)
+		runtime.Quit(ctx)
+	})
 }
 
 func (a *App) beforeClose(ctx context.Context) bool {
+	if a.frontendReady.Load() && !a.closeApproved.Load() {
+		runtime.EventsEmit(ctx, "app:close-requested")
+		return true
+	}
 	width, height := runtime.WindowGetSize(ctx)
 	_ = saveWindowState(WindowState{Width: width, Height: height})
 	return false

@@ -32,6 +32,7 @@ const runtimeMocks = vi.hoisted(() => {
   const events = new Map<string, (...args: unknown[]) => void>()
   return {
     events,
+    EventsEmit: vi.fn(),
     EventsOn: vi.fn((eventName: string, callback: (...args: unknown[]) => void) => {
       events.set(eventName, callback)
       return () => events.delete(eventName)
@@ -58,6 +59,7 @@ vi.mock('../wailsjs/go/main/App', () => ({
 
 vi.mock('../wailsjs/runtime/runtime', () => ({
   EventsOn: runtimeMocks.EventsOn,
+  EventsEmit: runtimeMocks.EventsEmit,
 }))
 
 vi.mock('./lib/appFeedback', () => ({
@@ -567,6 +569,91 @@ describe('App shell', () => {
     expect(SaveMarkdown).toHaveBeenCalledWith('intro.md', '# Changed')
     expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(false)
     vi.useRealTimers()
+  })
+
+  test('keeps the native window open when closing unsaved notes is cancelled', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({ rootPath: 'D:/notes', name: 'notes', tree: [
+      { name: 'intro.md', path: 'intro.md', type: 'file' },
+    ] } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({ path: 'intro.md', name: 'intro.md', content: 'original' })
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.mock-editor').setValue('unsaved')
+    appFeedbackMocks.confirm.mockRejectedValueOnce(new Error('cancel'))
+    runtimeMocks.events.get('app:close-requested')?.()
+    await flushPromises()
+    expect(runtimeMocks.EventsEmit).not.toHaveBeenCalledWith('app:close-confirmed')
+    runtimeMocks.events.get('app:close-requested')?.()
+    await flushPromises()
+    expect(runtimeMocks.EventsEmit).toHaveBeenCalledWith('app:close-confirmed')
+    wrapper.unmount()
+  })
+
+  test('keeps edits made during a save dirty', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({ rootPath: 'D:/notes', name: 'notes', tree: [
+      { name: 'intro.md', path: 'intro.md', type: 'file' },
+    ] } as any)
+    vi.mocked(ReadMarkdown).mockResolvedValue({ path: 'intro.md', name: 'intro.md', content: 'original' })
+    let finishSave!: (value: any) => void
+    vi.mocked(SaveMarkdown).mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve }))
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="file-intro.md"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.mock-editor').setValue('first edit')
+    await wrapper.get('[data-test="save-now"]').trigger('click')
+    await wrapper.get('.mock-editor').setValue('second edit')
+    finishSave({ path: 'intro.md', savedAt: 'now' })
+    await flushPromises()
+    expect(SaveMarkdown).toHaveBeenCalledWith('intro.md', 'first edit')
+    expect(wrapper.find('[data-test="tab-intro.md"] .dirty-mark').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('keeps the last selected note active when reads finish out of order', async () => {
+    vi.mocked(SelectWorkspace).mockResolvedValue({ rootPath: 'D:/notes', name: 'notes', tree: [
+      { name: 'a.md', path: 'a.md', type: 'file' },
+      { name: 'b.md', path: 'b.md', type: 'file' },
+    ] } as any)
+    let finishRead!: (value: any) => void
+    vi.mocked(ReadMarkdown).mockImplementationOnce(() => new Promise((resolve) => { finishRead = resolve }))
+      .mockResolvedValueOnce({ path: 'b.md', name: 'b.md', content: 'B' })
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="file-a.md"]').trigger('click')
+    await wrapper.get('[data-test="file-b.md"]').trigger('click')
+    await flushPromises()
+    finishRead({ path: 'a.md', name: 'a.md', content: 'A' })
+    await flushPromises()
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('B')
+    wrapper.unmount()
+  })
+
+  test('inserts a pending attachment into its original note after switching tabs', async () => {
+    mockSettingsValues({ 'donote.attachmentDirectories': '{"images":"assets","files":"assets"}' })
+    const tree = ['a.md', 'b.md'].map((path) => ({ name: path, path, type: 'file' }))
+    vi.mocked(SelectWorkspace).mockResolvedValue({ rootPath: 'D:/notes', name: 'notes', tree } as any)
+    vi.mocked(ListWorkspace).mockResolvedValue(tree as any)
+    vi.mocked(ReadMarkdown).mockImplementation(async (path) => ({ path, name: path, content: path }))
+    let finishUpload!: (value: any) => void
+    vi.mocked(SaveAttachment).mockImplementationOnce(() => new Promise((resolve) => { finishUpload = resolve }))
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="file-a.md"]').trigger('click')
+    await flushPromises()
+    dispatchPasteFiles(wrapper.get('.mock-editor').element, [new File(['image'], 'photo.png', { type: 'image/png' })])
+    await waitForAssertion(() => expect(finishUpload).toBeDefined())
+    await wrapper.get('[data-test="file-b.md"]').trigger('click')
+    await flushPromises()
+    finishUpload({ name: 'photo.png', path: 'assets/photo.png' })
+    await flushPromises()
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toBe('b.md')
+    await wrapper.get('[data-test="file-a.md"]').trigger('click')
+    await flushPromises()
+    expect((wrapper.get('.mock-editor').element as HTMLTextAreaElement).value).toContain('![photo.png](assets/photo.png)')
+    wrapper.unmount()
   })
 
   test('allows dismissing the error banner and shows repeated errors again', async () => {

@@ -96,14 +96,14 @@ describe('Donote shell styles', () => {
   test('uses the selected dark command palette for the dark theme', () => {
     const block = cssBlock(":root[data-theme='dark']")
 
-    expectCssVariable(block, '--app-bg', '#101318')
-    expectCssVariable(block, '--surface', '#181c23')
-    expectCssVariable(block, '--surface-muted', '#141820')
-    expectCssVariable(block, '--surface-raised', '#222832')
-    expectCssVariable(block, '--border', '#303743')
-    expectCssVariable(block, '--accent', '#f4b860')
-    expectCssVariable(block, '--accent-soft', '#3a2817')
-    expectCssVariable(block, '--accent-strong', '#ffe4ba')
+    expectCssVariable(block, '--app-bg', '#1c1c1e')
+    expectCssVariable(block, '--surface', '#242426')
+    expectCssVariable(block, '--surface-muted', '#202022')
+    expectCssVariable(block, '--surface-raised', '#2c2c2e')
+    expectCssVariable(block, '--border', '#414145')
+    expectCssVariable(block, '--accent', '#64aaff')
+    expectCssVariable(block, '--accent-soft', '#20344f')
+    expectCssVariable(block, '--accent-strong', '#bfdbff')
     expect(block).not.toContain('--border-strong')
   })
 

@@ -40,6 +40,8 @@ describe('CommandToolbar', () => {
       .map((item) => item.attributes('data-test'))
     expect(actionOrder.indexOf('utility-search')).toBe(actionOrder.indexOf('save-now') - 1)
 
+    await wrapper.get('[data-test="create-note"]').trigger('click')
+    expect(wrapper.emitted('create-note')).toHaveLength(1)
     await wrapper.get('[data-test="toggle-sidebar"]').trigger('click')
     await wrapper.get('[data-test="utility-search"]').trigger('click')
     await wrapper.get('[data-test="save-now"]').trigger('click')

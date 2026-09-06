@@ -11,7 +11,11 @@ Vue 3, TypeScript, and Milkdown.
 - Save changes manually with `Ctrl+S` or the toolbar save button.
 - Create, rename, and delete Markdown notes.
 - Search inside the current document with `Ctrl+F`.
-- View a heading outline and switch between light and dark themes.
+- View a heading outline and switch between coordinated Apple-inspired light and dark themes.
+- Start a new note directly from the toolbar or the open-workspace empty state.
+- Keep edits made during an in-flight save marked as unsaved; late file reads cannot steal the active tab.
+- Paste attachments into the note where the paste started, even when switching tabs during upload.
+- Confirm before quitting with unsaved notes; saving in progress keeps the window open.
 
 ## Development
 
@@ -57,3 +61,11 @@ The built executable is written to `build/bin/donote.exe`.
 When publishing a new version, create the GitHub Release from the new version
 tag and upload `build/bin/donote.exe` as a release asset. Every new release must
 include the built Windows executable.
+
+## Interaction verification
+
+The shell workflow tests cover delayed saves, out-of-order reads, attachment uploads
+across tab switches, and cancellation of the native close-request event. The editor
+was visually checked in a browser with a mocked Wails bridge in light/dark themes
+and at a 1000px desktop width. Native Windows close-button/event delivery still
+requires a desktop smoke test; browser checks do not exercise WebView2 or disk I/O.

@@ -18,7 +18,7 @@ import {
   SelectWorkspace,
 } from '../wailsjs/go/main/App'
 import type { main } from '../wailsjs/go/models'
-import { EventsOn } from '../wailsjs/runtime/runtime'
+import { EventsEmit, EventsOn } from '../wailsjs/runtime/runtime'
 import AppProviders from './components/AppProviders.vue'
 import DocumentTabs from './components/DocumentTabs.vue'
 import EditorSurface from './components/EditorSurface.vue'
@@ -122,6 +122,8 @@ const feedback = createAppFeedback(theme, (options) =>
   promptDialog.value?.requestPrompt(options) ?? Promise.resolve(null),
 )
 
+let closeRequested = false
+let selectionRevision = 0
 let sidebarResizeStartX = 0
 let sidebarResizeStartWidth = sidebarWidth.value
 let workspaceSelectionPromise: Promise<main.WorkspaceInfo | null> | null = null
@@ -186,6 +188,7 @@ watch(searchQuery, () => {
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   menuEventCleanups.push(
+    EventsOn('app:close-requested', () => { void requestAppClose() }),
     EventsOn('menu:open-workspace', () => {
       void openWorkspaceWithDirtyCheck()
     }),
@@ -193,6 +196,7 @@ onMounted(() => {
       void createNote()
     }),
   )
+  EventsEmit('app:ready')
   void initializeApp()
 })
 
@@ -207,6 +211,31 @@ onBeforeUnmount(() => {
 onUnmounted(() => {
   feedback.destroy()
 })
+
+async function requestAppClose() {
+  if (closeRequested) return
+  closeRequested = true
+  try {
+    if (openDocuments.value.some((document) => document.saving)) {
+      feedback.error('正在保存，请稍后关闭窗口')
+      return
+    }
+    if (hasDirtyDocuments()) {
+      await feedback.confirm({
+        title: '退出 Donote',
+        content: '有笔记尚未保存。退出将丢失这些更改，请取消后按 Ctrl+S 保存。',
+        positiveText: '放弃更改并退出',
+        negativeText: '继续编辑',
+        type: 'warning',
+      })
+    }
+    EventsEmit('app:close-confirmed')
+  } catch {
+    // Keep the window open when the user cancels.
+  } finally {
+    closeRequested = false
+  }
+}
 
 async function initializeApp() {
   await initializeSettings()
@@ -322,6 +351,8 @@ async function restoreLastWorkspace(): Promise<boolean> {
 }
 
 function applyWorkspaceInfo(info: main.WorkspaceInfo) {
+  selectionRevision += 1
+  loadingDocument.value = false
   collapsedFolderPaths.value = new Set(
     getInitialCollapsedFolderPaths(info.rootPath, collectFolderPaths(info.tree), settingsStorage),
   )
@@ -359,6 +390,8 @@ async function restoreOpenDocumentsForWorkspace(rootPath: string) {
 }
 
 async function selectFile(path: string) {
+  const revision = ++selectionRevision
+  loadingDocument.value = false
   errorMessage.value = ''
   if (activeDocumentPath.value === path) {
     return
@@ -374,6 +407,7 @@ async function selectFile(path: string) {
   try {
     loadingDocument.value = true
     const document = await ReadMarkdown(path)
+    if (revision !== selectionRevision) return
     openDocuments.value.push(createOpenDocument(document))
     activeDocumentPath.value = document.path
     searchQuery.value = ''
@@ -381,9 +415,9 @@ async function selectFile(path: string) {
     persistOpenDocumentSession()
     await nextTick()
   } catch (error) {
-    setError(error)
+    if (revision === selectionRevision) setError(error)
   } finally {
-    loadingDocument.value = false
+    if (revision === selectionRevision) loadingDocument.value = false
   }
 }
 
@@ -504,11 +538,13 @@ async function flushSave() {
     return
   }
 
+  const content = document.content
   document.saving = true
   document.error = ''
+  errorMessage.value = ''
   try {
-    await SaveMarkdown(document.path, document.content)
-    document.savedContent = document.content
+    await SaveMarkdown(document.path, content)
+    document.savedContent = content
   } catch (error) {
     document.error = error instanceof Error ? error.message : String(error)
     setError(error)
@@ -518,6 +554,7 @@ async function flushSave() {
 }
 
 async function handlePasteFiles(files: File[]) {
+  const targetWorkspace = workspace.value
   const document = activeDocument.value
   if (!workspace.value || !document || files.length === 0) {
     return
@@ -536,21 +573,25 @@ async function handlePasteFiles(files: File[]) {
           ? attachmentDirectories.value.images
           : attachmentDirectories.value.files
         const base64 = await readFileAsBase64(file)
+        if (workspace.value !== targetWorkspace) throw new Error('工作区已切换，请重新粘贴附件')
         const attachment = await SaveAttachment(directory, file.name, file.type, base64)
         return attachmentMarkdown(file, attachment, document.path)
       }),
     )
-    insertMarkdown(markdown.join('\n'))
-    workspace.value.tree = await reloadTreeFromCurrentWorkspace()
+    if (workspace.value !== targetWorkspace) return
+    const target = openDocuments.value.find((item) => item.path === document.path)
+    if (target) insertMarkdown(markdown.join('\n'), target)
+    const tree = await reloadTreeFromCurrentWorkspace()
+    if (workspace.value === targetWorkspace) workspace.value.tree = tree
   } catch (error) {
     setError(error)
   }
 }
 
-function insertMarkdown(markdown: string) {
-  if (!activeDocument.value) return
-  const spacer = editorContent.value && !editorContent.value.endsWith('\n') ? '\n\n' : ''
-  editorContent.value = `${editorContent.value}${spacer}${markdown}`
+function insertMarkdown(markdown: string, document = activeDocument.value) {
+  if (!document) return
+  const spacer = document.content && !document.content.endsWith('\n') ? '\n\n' : ''
+  document.content = `${document.content}${spacer}${markdown}`
 }
 
 function syncActiveCleanContent(content: string) {
@@ -732,6 +773,8 @@ function goToPreviousMatch() {
 }
 
 function switchDocument(path: string) {
+  selectionRevision += 1
+  loadingDocument.value = false
   activeDocumentPath.value = path
   searchQuery.value = ''
   activeSearchIndex.value = -1
@@ -1019,6 +1062,7 @@ function dismissErrorBanner() {
       @select="toggleUtilityPanel"
       @search="toggleEditorSearch"
       @save="flushSave"
+      @create-note="createNote"
       @toggle-sidebar="toggleSidebar"
       @toggle-theme="switchTheme"
     />
@@ -1075,6 +1119,8 @@ function dismissErrorBanner() {
         <EditorSurface
           v-model="editorContent"
           :document="activeDocument"
+          :workspace-open="!!workspace"
+          :loading="loadingDocument"
           :search-query="searchQuery"
           :active-search-index="activeSearchIndex"
           :resolve-image-source="resolveEditorImageSource"
@@ -1082,6 +1128,7 @@ function dismissErrorBanner() {
           @paste-files="handlePasteFiles"
           @insert-markdown="insertMarkdown"
           @open-workspace="openWorkspaceWithDirtyCheck"
+          @create-note="createNote"
         />
       </main>
 
