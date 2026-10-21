@@ -62,3 +62,17 @@ Keep all file access constrained to the selected workspace. Avoid accepting
 absolute paths or `..` traversal from the frontend. Do not commit local build
 outputs from `build/`, generated dependency folders, or machine-specific Wails
 artifacts.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues for `donkw/donote`. Before reading or publishing tickets, see `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five default triage labels. Before triaging issues, see `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: root `GLOSSARY.md` and `docs/adr/`. Before exploring domain concepts or decisions, see `docs/agents/domain.md`.
